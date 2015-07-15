@@ -33,6 +33,7 @@
 
 package org.irmacard.mno.web;
 
+import java.io.IOException;
 import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.util.HashMap;
@@ -40,6 +41,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import javax.inject.Inject;
+import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -47,6 +49,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
@@ -70,6 +73,8 @@ import org.irmacard.mno.common.PassportVerificationResult;
 import org.irmacard.mno.common.PassportVerificationResultMessage;
 import org.irmacard.mno.common.RequestFinishIssuanceMessage;
 import org.irmacard.mno.common.RequestStartIssuanceMessage;
+import org.irmacard.mno.web.exceptions.InputInvalidException;
+import org.irmacard.mno.web.exceptions.SessionUnknownException;
 
 import net.sf.scuba.smartcards.ProtocolCommands;
 import net.sf.scuba.smartcards.ProtocolResponses;
@@ -109,7 +114,7 @@ public class EnrollmentResource {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public PassportVerificationResultMessage startPassportVerification(PassportDataMessage passportData) {
-        EnrollmentSession session = getSession(passportData.getSessionToken());
+        EnrollmentSession session = getSession(passportData);
 
         // Verify state of session
         if (session.getState() != EnrollmentSession.State.STARTED) {
@@ -132,8 +137,9 @@ public class EnrollmentResource {
     @Path("/issue/credential-list")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Map<String, Map<String, String>> getCredentialList(BasicClientMessage startMessage) throws InfoException {
-        EnrollmentSession session = getSession(startMessage.getSessionToken());
+    public Map<String, Map<String, String>> getCredentialList(BasicClientMessage startMessage)
+            throws InfoException, IOException {
+        EnrollmentSession session = getSession(startMessage);
 
         // Verify state of session
         // TODO Handle state
@@ -154,7 +160,7 @@ public class EnrollmentResource {
     @Produces(MediaType.APPLICATION_JSON)
     public ProtocolCommands startCredentialIssuing(RequestStartIssuanceMessage startMessage,
             @PathParam("cred") String cred) throws InfoException {
-        EnrollmentSession session = getSession(startMessage.getSessionToken());
+        EnrollmentSession session = getSession(startMessage);
 
         // Verify state of session
         if (session.getState() != EnrollmentSession.State.PASSPORT_VERIFIED) {
@@ -194,7 +200,7 @@ public class EnrollmentResource {
     @Produces(MediaType.APPLICATION_JSON)
     public ProtocolCommands finishCredentialIssuing(RequestFinishIssuanceMessage finishMessage,
             @PathParam("cred") String cred) throws InfoException, CredentialsException {
-        EnrollmentSession session = getSession(finishMessage.getSessionToken());
+        EnrollmentSession session = getSession(finishMessage);
         ProtocolResponses responses = finishMessage.getResponses();
 
         // Verify state of session
@@ -226,12 +232,27 @@ public class EnrollmentResource {
         return commands;
     }
 
-    private EnrollmentSession getSession(String sessionToken) {
-        final EnrollmentSession session = sessions.getSession(sessionToken);
+    /**
+     * Retrieve the stored session. This method throws runtime errors when the
+     * input is malformed, or the session cannot be found.
+     *
+     * @param message
+     *            the BasicClientMessage containing the sessionToken
+     * @return the EnrollmentSession
+     */
+    private EnrollmentSession getSession(BasicClientMessage message) {
+        if (message == null) {
+            throw new InputInvalidException("Supply a valid JSON object");
+        }
 
+        String sessionToken = message.getSessionToken();
+        if (sessionToken == null) {
+            throw new InputInvalidException("Specify the sessionToken field");
+        }
+
+        final EnrollmentSession session = sessions.getSession(sessionToken);
         if (session == null) {
-            // Couldn't find session
-            throw new WebApplicationException(Response.Status.UNAUTHORIZED);
+            throw new SessionUnknownException();
         }
 
         return session;
