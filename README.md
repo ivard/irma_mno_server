@@ -26,15 +26,15 @@ You need to have getters to get the fields, and setters to actually be able to r
 
 # Server API
 
-The following describes the API offered by the server to an MNO enrollment client. All calls except `start` require the client to pass in its sessionToken. If the session token is unknown, or has expired, the server will return a
+The following describes the API offered by the server to an MNO enrollment client. All calls except `start` require the client to pass in its sessionToken. If the session token is unknown, or has expired, the server complains with a 401.
 
  * 401 UNAUTHORIZED if sessionToken is unknown or expired
 
-Admittedly, this is a bit of an abuse of HTTP status codes, but this one most closely matches the intended meaning. Similarly, the client can send malformatted POST requests, in which case the server will return
+Admittedly, this is a bit of an abuse of HTTP status codes, but this one most closely matches the intended meaning. Similarly, the client can send malformatted POST requests, in which case the server complains with a 400.
 
  * 400 BAD REQUEST if the POSTed JSON is incorrect
 
-Finally, the server operates a strict state engine. If requests are sent out of order the server also replies with a
+Finally, the server operates a strict state engine. If requests are sent out of order the server also complains with a 400.
 
  * 401 UNAUTHORIZED if sessionToken is unknown or expired
 
@@ -50,9 +50,6 @@ Outputs:
 
  * sessionToken: a string encoding the session token
  * nonce: a Base64 encoded nonce for the active authentication
-
-Throws:
- * 401 UNAUTHORIZED (bit of an abuse case) if sessionToken is unknown
 
 ## verify-passport
 
