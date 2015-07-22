@@ -38,10 +38,9 @@ import java.io.IOException;
 import javax.ws.rs.ext.ContextResolver;
 import javax.ws.rs.ext.Provider;
 
-import org.irmacard.mno.common.util.ProtocolCommandDeserializer;
-import org.irmacard.mno.common.util.ProtocolCommandSerializer;
-import org.irmacard.mno.common.util.ProtocolResponseDeserializer;
-import org.irmacard.mno.common.util.ProtocolResponseSerializer;
+import org.irmacard.mno.common.PassportDataMessage;
+import org.irmacard.mno.common.PassportVerificationResultMessage;
+import org.irmacard.mno.common.util.*;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
@@ -82,6 +81,10 @@ public class JSONMapperProvider implements ContextResolver<ObjectMapper> {
 
         customSerDes.addSerializer(new ProtocolResponseSerializer(ProtocolResponse.class));
         customSerDes.addDeserializer(ProtocolResponse.class, new ProtocolResponseDeserializer(ProtocolResponse.class));
+
+        customSerDes.addDeserializer(PassportDataMessage.class, new PassportDataMessageDeserializer(PassportDataMessage.class));
+
+        customSerDes.addSerializer(new PassportVerificationResultMessageSerializer(PassportVerificationResultMessage.class));
 
         mapper.registerModule(customSerDes);
     }

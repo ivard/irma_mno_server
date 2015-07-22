@@ -121,7 +121,10 @@ public class EnrollmentResource {
             throw new WebApplicationException(Response.Status.UNAUTHORIZED);
         }
 
-        PassportVerificationResult result = verifyPassportData(session.getPassportDataMessage());
+        session.setPassportData(passportData);
+
+        // Check the passport data
+        PassportVerificationResult result = verifyPassportData(passportData, session.getStartMessage().getNonce());
 
         if (result == PassportVerificationResult.SUCCESS) {
             session.setState(EnrollmentSession.State.PASSPORT_VERIFIED);
@@ -300,9 +303,13 @@ public class EnrollmentResource {
         return credentials;
     }
 
-    private PassportVerificationResult verifyPassportData(PassportDataMessage msg) {
-        // TODO Actually check something
-        return PassportVerificationResult.SUCCESS;
+    private PassportVerificationResult verifyPassportData(PassportDataMessage msg, byte[] nonce) {
+        // TODO: query MNO DB
+        if (msg.verify(nonce)) {
+            return PassportVerificationResult.SUCCESS;
+        } else {
+            return PassportVerificationResult.PASSPORT_INVALID;
+        }
     }
 
     private CredentialDescription getCredentialDescription(String cred) throws InfoException {
