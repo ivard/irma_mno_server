@@ -305,11 +305,7 @@ public class EnrollmentResource {
 
     private PassportVerificationResult verifyPassportData(PassportDataMessage msg, byte[] nonce) {
         // TODO: query MNO DB
-        if (msg.verify(nonce)) {
-            return PassportVerificationResult.SUCCESS;
-        } else {
-            return PassportVerificationResult.PASSPORT_INVALID;
-        }
+        return msg.verify(nonce);
     }
 
     private CredentialDescription getCredentialDescription(String cred) throws InfoException {
