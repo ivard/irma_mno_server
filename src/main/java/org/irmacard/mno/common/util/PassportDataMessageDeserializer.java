@@ -103,7 +103,7 @@ public class PassportDataMessageDeserializer extends StdDeserializer<PassportDat
 			throw new JsonMappingException("Required field not found");
 		}
 
-		PassportDataMessage passportMsg = new PassportDataMessage(sessionToken, imsi, null);
+		PassportDataMessage passportMsg = new PassportDataMessage(sessionToken, imsi);
 		passportMsg.setSodFile(sodFile);
 		passportMsg.setDg1File(dg1File);
 		passportMsg.setDg15File(dg15File);
