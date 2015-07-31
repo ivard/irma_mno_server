@@ -41,6 +41,7 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import org.bouncycastle.util.encoders.Base64;
 import org.irmacard.mno.common.PassportDataMessage;
+import org.jmrtd.lds.DG14File;
 import org.jmrtd.lds.DG15File;
 import org.jmrtd.lds.DG1File;
 import org.jmrtd.lds.SODFile;
@@ -60,6 +61,7 @@ public class PassportDataMessageDeserializer extends StdDeserializer<PassportDat
 		String imsi = null;
 		SODFile sodFile = null;
 		DG1File dg1File = null;
+		DG14File dg14File = null;
 		DG15File dg15File = null;
 		byte[] response = null;
 
@@ -84,6 +86,10 @@ public class PassportDataMessageDeserializer extends StdDeserializer<PassportDat
 					dg1File = new DG1File(new ByteArrayInputStream(Base64.decode(jparser.getText())));
 					System.out.println(dg1File.toString());
 					break;
+				case "dg14File":
+					dg14File = new DG14File(new ByteArrayInputStream(Base64.decode(jparser.getText())));
+					System.out.println(dg14File.toString());
+					break;
 				case "dg15File":
 					dg15File = new DG15File(new ByteArrayInputStream(Base64.decode(jparser.getText())));
 					System.out.println(dg15File.toString());
@@ -106,6 +112,7 @@ public class PassportDataMessageDeserializer extends StdDeserializer<PassportDat
 		PassportDataMessage passportMsg = new PassportDataMessage(sessionToken, imsi);
 		passportMsg.setSodFile(sodFile);
 		passportMsg.setDg1File(dg1File);
+		passportMsg.setDg14File(dg14File);
 		passportMsg.setDg15File(dg15File);
 		passportMsg.setResponse(response);
 
