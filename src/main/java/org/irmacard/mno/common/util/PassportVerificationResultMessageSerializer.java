@@ -55,7 +55,6 @@ public class PassportVerificationResultMessageSerializer extends StdSerializer<P
 	@Override
 	public void serialize(PassportVerificationResultMessage cmd, JsonGenerator jsongen, SerializerProvider provider)
 			throws IOException, JsonGenerationException {
-		System.out.println(cmd.getResult().toString());
 		jsongen.writeStartObject();
 		jsongen.writeStringField("result", cmd.getResult().toString());
 		jsongen.writeEndObject();

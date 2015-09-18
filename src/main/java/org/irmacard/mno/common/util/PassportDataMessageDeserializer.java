@@ -72,31 +72,24 @@ public class PassportDataMessageDeserializer extends StdDeserializer<PassportDat
 			switch (jparser.getCurrentName()) {
 				case "sessionToken":
 					sessionToken = jparser.getText();
-					System.out.println(sessionToken);
 					break;
 				case "imsi":
 					imsi = jparser.getText();
-					System.out.println(imsi);
 					break;
 				case "sodFile":
 					sodFile = new SODFile(new ByteArrayInputStream(Base64.decode(jparser.getText())));
-					System.out.println(sodFile.toString());
 					break;
 				case "dg1File":
 					dg1File = new DG1File(new ByteArrayInputStream(Base64.decode(jparser.getText())));
-					System.out.println(dg1File.toString());
 					break;
 				case "dg14File":
 					dg14File = new DG14File(new ByteArrayInputStream(Base64.decode(jparser.getText())));
-					System.out.println(dg14File.toString());
 					break;
 				case "dg15File":
 					dg15File = new DG15File(new ByteArrayInputStream(Base64.decode(jparser.getText())));
-					System.out.println(dg15File.toString());
 					break;
 				case "response":
 					response = Base64.decode(jparser.getText());
-					System.out.println(response.length);
 					break;
 				default:
 					break;
