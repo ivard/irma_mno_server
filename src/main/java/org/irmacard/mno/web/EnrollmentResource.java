@@ -36,12 +36,15 @@ package org.irmacard.mno.web;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.security.SecureRandom;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
 import javax.inject.Inject;
-import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -49,7 +52,6 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
@@ -78,6 +80,7 @@ import org.irmacard.mno.web.exceptions.SessionUnknownException;
 
 import net.sf.scuba.smartcards.ProtocolCommands;
 import net.sf.scuba.smartcards.ProtocolResponses;
+import org.jmrtd.lds.MRZInfo;
 
 @Path("v1")
 public class EnrollmentResource {
@@ -286,21 +289,58 @@ public class EnrollmentResource {
 
     private Map<String, Map<String, String>> getCredentialList(EnrollmentSession session) throws InfoException {
         HashMap<String, Map<String, String>> credentials = new HashMap<String, Map<String, String>>();
+        MRZInfo mrz = session.getPassportDataMessage().getDg1File().getMRZInfo();
 
-        HashMap<String, String> rootAttributes = new HashMap<String, String>();
+        SimpleDateFormat bacDateFormat = new SimpleDateFormat("yyMMdd");
+        Date dob;
 
-        rootAttributes.put("BSN", "123456789");
-        credentials.put("root", rootAttributes);
+        try {
+            dob = bacDateFormat.parse(mrz.getDateOfBirth());
+        }  catch (ParseException e) {
+            e.printStackTrace();
+            throw new InfoException("Failed to parse MRZ", e);
+        }
 
-        HashMap<String, String> ageLowerAttributes = new HashMap<String, String>();
+        int[] lowAges = {12,16,18,21};
+        credentials.put("ageLower", ageAttributes(lowAges, dob));
 
-        ageLowerAttributes.put("over12", "yes");
-        ageLowerAttributes.put("over16", "yes");
-        ageLowerAttributes.put("over18", "yes");
-        ageLowerAttributes.put("over21", "yes");
-        credentials.put("ageLower", ageLowerAttributes);
+        int[] highAges = {50, 60, 65, 75};
+        credentials.put("ageHigher", ageAttributes(highAges, dob));
+
+        HashMap<String,String> nameAttributes = new HashMap<>();
+        nameAttributes.put("familyname", mrz.getPrimaryIdentifier());
+        nameAttributes.put("firstnames", mrz.getSecondaryIdentifier().replace('<', ' ').replaceAll(" *$", ""));
+        nameAttributes.put("firstname", mrz.getSecondaryIdentifierComponents()[0]);
+        nameAttributes.put("prefix", " "); // TODO?
+        credentials.put("fullName", nameAttributes);
+
+        HashMap<String, String> idDocumentAttributes = new HashMap<String, String>();
+        idDocumentAttributes.put("number", mrz.getDocumentNumber());
+        if (mrz.getDocumentType() == MRZInfo.DOC_TYPE_ID1)
+            idDocumentAttributes.put("type", "ID card");
+        else if (mrz.getDocumentType() == MRZInfo.DOC_TYPE_ID3)
+            idDocumentAttributes.put("type", "Passport");
+        else
+            idDocumentAttributes.put("type", "unknown");
+        credentials.put("idDocument", idDocumentAttributes);
 
         return credentials;
+    }
+
+    public HashMap<String, String> ageAttributes(int[] ages, Date dob) {
+        HashMap<String, String> attrs = new HashMap<>();
+
+        for (int age : ages) {
+            Calendar c = Calendar.getInstance();
+            c.add(Calendar.YEAR, -1 * age);
+            Date ageDate = c.getTime();
+
+            String attrValue;
+            attrValue = dob.before(ageDate) ? "yes" : "no";
+            attrs.put("over" + age, attrValue);
+        }
+
+        return attrs;
     }
 
     private PassportVerificationResult verifyPassportData(PassportDataMessage msg, byte[] nonce) {
