@@ -38,10 +38,7 @@ import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
 
 import javax.inject.Inject;
@@ -292,10 +289,13 @@ public class EnrollmentResource {
         MRZInfo mrz = session.getPassportDataMessage().getDg1File().getMRZInfo();
 
         SimpleDateFormat bacDateFormat = new SimpleDateFormat("yyMMdd");
+        SimpleDateFormat hrDateFormat = new SimpleDateFormat("MMM d, y"); // Matches Android's default date format
         Date dob;
+        Date expiry;
 
         try {
             dob = bacDateFormat.parse(mrz.getDateOfBirth());
+            expiry = bacDateFormat.parse(mrz.getDateOfExpiry());
         }  catch (ParseException e) {
             e.printStackTrace();
             throw new InfoException("Failed to parse MRZ", e);
@@ -308,14 +308,24 @@ public class EnrollmentResource {
         credentials.put("ageHigher", ageAttributes(highAges, dob));
 
         HashMap<String,String> nameAttributes = new HashMap<>();
-        nameAttributes.put("familyname", mrz.getPrimaryIdentifier());
-        nameAttributes.put("firstnames", mrz.getSecondaryIdentifier().replace('<', ' ').replaceAll(" *$", ""));
-        nameAttributes.put("firstname", mrz.getSecondaryIdentifierComponents()[0]);
-        nameAttributes.put("prefix", " "); // TODO?
+        String[] nameParts = splitFamilyName(mrz.getPrimaryIdentifier());
+        String firstnames = toTitleCase(joinStrings(mrz.getSecondaryIdentifierComponents()));
+        // The first of the first names is not always the person's usual name ("roepnaam"). In fact, the person's
+        // usual name need not even be in his list of first names at all. But given only the MRZ, there is no way of
+        // knowing what is his/her usual name... So we can only guess.
+        String firstname = toTitleCase(mrz.getSecondaryIdentifierComponents()[0]);
+
+        nameAttributes.put("familyname", toTitleCase(nameParts[1]));
+        nameAttributes.put("prefix", nameParts[0]);
+        nameAttributes.put("firstnames", firstnames);
+        nameAttributes.put("firstname", firstname);
+
         credentials.put("fullName", nameAttributes);
 
         HashMap<String, String> idDocumentAttributes = new HashMap<String, String>();
         idDocumentAttributes.put("number", mrz.getDocumentNumber());
+        idDocumentAttributes.put("expires", hrDateFormat.format(expiry));
+        idDocumentAttributes.put("nationality", mrz.getNationality());
         if (mrz.getDocumentType() == MRZInfo.DOC_TYPE_ID1)
             idDocumentAttributes.put("type", "ID card");
         else if (mrz.getDocumentType() == MRZInfo.DOC_TYPE_ID3)
@@ -325,6 +335,71 @@ public class EnrollmentResource {
         credentials.put("idDocument", idDocumentAttributes);
 
         return credentials;
+    }
+
+    /**
+     * Try to split the family name in into a prefix and a proper part, using a list of commonly occuring (Dutch)
+     * prefixes.
+     * @param name The name to split
+     * @return An array in which the first element is the prefix, or " " if none found, and the second is the
+     * remainder of the name.
+     */
+    public String[] splitFamilyName(String name) {
+        name = name.toLowerCase();
+        String[] parts = {" ", name};
+
+        // Taken from https://nl.wikipedia.org/wiki/Tussenvoegsel
+        String[] prefixes = {"af", "aan", "bij", "de", "den", "der", "d'", "het", "'t", "in", "onder", "op", "over", "'s", "'t", "te", "ten", "ter", "tot", "uit", "uijt", "van", "vanden", "ver", "voor", "aan de", "aan den", "aan der", "aan het", "aan 't", "bij de", "bij den", "bij het", "bij 't", "boven d'", "de die", "de die le", "de l'", "de la", "de las", "de le", "de van der,", "in de", "in den", "in der", "in het", "in 't", "onder de", "onder den", "onder het", "onder 't", "over de", "over den", "over het", "over 't", "op de", "op den", "op der", "op gen", "op het", "op 't", "op ten", "van de", "van de l'", "van den", "van der", "van gen", "van het", "van la", "van 't", "van ter", "van van de", "uit de", "uit den", "uit het", "uit 't", "uit te de", "uit ten", "uijt de", "uijt den", "uijt het", "uijt 't", "uijt te de", "uijt ten", "voor de", "voor den", "voor in 't"};
+
+        // I'm too lazy to manually sort the list above on string size.
+        Arrays.sort(prefixes, new Comparator<String>() {
+            @Override
+            public int compare(String o1, String o2) {
+                if (o1.length() < o2.length()) return 1;
+                if (o1.length() > o2.length()) return -1;
+                return o1.compareTo(o2);
+            }
+        });
+
+        for (String prefix : prefixes) {
+            if (name.startsWith(prefix + " ")) {
+                parts[0] = prefix;
+                parts[1] = name.substring(prefix.length() + 1); // + 1 to skip the space between the prefix and the name
+                return parts;
+            }
+        }
+
+        return parts;
+    }
+
+    public static String toTitleCase(String s) {
+        String ACTIONABLE_DELIMITERS = " '-/"; // these cause the character following to be capitalized
+
+        StringBuilder sb = new StringBuilder();
+        boolean capitalizeNext = true;
+
+        for (char c : s.toCharArray()) {
+            c = capitalizeNext ? Character.toUpperCase(c) : Character.toLowerCase(c);
+            sb.append(c);
+            capitalizeNext = (ACTIONABLE_DELIMITERS.indexOf(c) >= 0);
+        }
+
+        return sb.toString();
+    }
+
+    public static String joinStrings(String[] parts) {
+        if (parts.length == 0)
+            return "";
+
+        String glue = " ";
+
+        String s = parts[0];
+
+        for (int i=1; i<parts.length; i++) {
+            s += glue + parts[i];
+        }
+
+        return s;
     }
 
     public HashMap<String, String> ageAttributes(int[] ages, Date dob) {
