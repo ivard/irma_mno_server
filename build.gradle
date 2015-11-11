@@ -21,7 +21,7 @@ dependencies {
     compile 'commons-codec:commons-codec:1.10'
 
     compile 'org.irmacard.idemix:idemix_terminal:0.9.1'
-    compile 'org.irmacard.mno:irma_mno_common:0.1.0'
+    compile 'org.irmacard.mno:irma_mno_common:0.1.1'
 
     testCompile "junit:junit:4.11"
     testCompile 'org.glassfish.jersey.test-framework.providers:jersey-test-framework-provider-jetty:2.19'
