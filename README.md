@@ -1,14 +1,12 @@
+# IRMA MNO server
+
+A self-enrollment server for IRMA credentials using passports or identity cards with NFC chips. It is meant to work together with the [card emulator app](https://github.com/credentials/irma_android_cardemu), which extracts some information from the passport and sends it this server. We then check the validity of the passport, extract some personal information from it, put that in a number of IRMA credentials and issue those to the card emulator app.
+
 # Running the server
 
-The gradle build file should take care of most of the dependencies. However, `irma_mno_common` is not yet available in the central IRMA repository, so you'll have to manually download and install it. To run the server in development mode simply call:
+The gradle build file should take care the dependencies. To run the server in development mode simply call:
 
     gradle jettyRun
-
-it is set up in such a way that it will automatically reload recompile class files. If your IDE already uses gradle to compile them this should work out of the box. Otherwise, simply call
-
-    gradle javaCompile
-
-and your app will be reloaded. Note that this is a lot faster than simply restarting the Jetty container.
 
 # Testing with cURL
 
@@ -148,4 +146,4 @@ This corresponds to the `RequestFinishIssuanceMessage` class in `irma_mno_common
 
 Outputs:
 
-As for `issue/{cred}/start` an array of CommandAPDUs that need to be send to the card.
+As for `issue/{cred}/start` an array of CommandAPDUs that need to be sent to the card.
