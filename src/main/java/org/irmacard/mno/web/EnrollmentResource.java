@@ -167,7 +167,7 @@ public class EnrollmentResource {
 
         // Verify state of session
         if (session.getState() != EnrollmentSession.State.PASSPORT_VERIFIED) {
-            // throw new WebApplicationException(Response.Status.UNAUTHORIZED);
+            throw new WebApplicationException(Response.Status.UNAUTHORIZED);
         }
 
         // Check if we can issue this credential
@@ -208,7 +208,7 @@ public class EnrollmentResource {
 
         // Verify state of session
         if (session.getState() != EnrollmentSession.State.PASSPORT_VERIFIED) {
-            // throw new WebApplicationException(Response.Status.UNAUTHORIZED);
+            throw new WebApplicationException(Response.Status.UNAUTHORIZED);
         }
 
         // Check if we can issue this credential
@@ -286,7 +286,12 @@ public class EnrollmentResource {
 
     private Map<String, Map<String, String>> getCredentialList(EnrollmentSession session) throws InfoException {
         HashMap<String, Map<String, String>> credentials = new HashMap<String, Map<String, String>>();
-        MRZInfo mrz = session.getPassportDataMessage().getDg1File().getMRZInfo();
+        MRZInfo mrz;
+        try {
+            mrz = session.getPassportDataMessage().getDg1File().getMRZInfo();
+        } catch (NullPointerException e) {
+            throw new InfoException("Cannot retrieve MRZ info");
+        }
 
         SimpleDateFormat bacDateFormat = new SimpleDateFormat("yyMMdd");
         SimpleDateFormat hrDateFormat = new SimpleDateFormat("MMM d, y"); // Matches Android's default date format
