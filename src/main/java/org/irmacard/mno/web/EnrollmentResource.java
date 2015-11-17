@@ -160,8 +160,9 @@ public class EnrollmentResource {
     @Path("/issue/{cred}/start")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public ProtocolCommands startCredentialIssuing(RequestStartIssuanceMessage startMessage,
-            @PathParam("cred") String cred) throws InfoException {
+    public ProtocolCommands startCredentialIssuing(
+            RequestStartIssuanceMessage startMessage, @PathParam("cred") String cred)
+                    throws InfoException, CredentialsException {
         EnrollmentSession session = getSession(startMessage);
 
         // Verify state of session
