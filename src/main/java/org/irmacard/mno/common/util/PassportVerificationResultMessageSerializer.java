@@ -47,6 +47,8 @@ import java.io.IOException;
  * "SUCCESS". Unfortunately, gson expects capitals.
  */
 public class PassportVerificationResultMessageSerializer extends StdSerializer<PassportVerificationResultMessage> {
+	private static final long serialVersionUID = 2147051852047866035L;
+
 	public PassportVerificationResultMessageSerializer(Class<PassportVerificationResultMessage> type) {
 		super(type);
 	}
@@ -56,6 +58,7 @@ public class PassportVerificationResultMessageSerializer extends StdSerializer<P
 			throws IOException, JsonGenerationException {
 		jsongen.writeStartObject();
 		jsongen.writeStringField("result", cmd.getResult().toString());
+		jsongen.writeObjectField("server", cmd.getIssueQr());
 		jsongen.writeEndObject();
 	}
 }

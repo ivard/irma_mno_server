@@ -52,31 +52,22 @@ public class MNOApplication extends ResourceConfig {
         // Register Jackson provider
         register(JacksonFeature.class);
 
-        // register enrollment application
-        register(EnrollmentResource.class);
+        // register enrollment applications
+        register(APDUEnrollmentResource.class);
+        register(JsonEnrollmentResource.class);
 
         // register session state
         register(new EnrollmentSessionsBinder());
 
         // Setup Core location for IRMA
-        URI CORE_LOCATION;
-        // TODO this try catch system is not very elegant, make a function to
-        // test if the stores are initialized
-        try {
-            DescriptionStore.getInstance();
-            IdemixKeyStore.getInstance();
-        } catch (InfoException e) {
-            // Not initialized, try now
+        if (!DescriptionStore.isLocationSet() || !IdemixKeyStore.isLocationSet()) {
             try {
-                CORE_LOCATION = MNOApplication.class.getClassLoader().getResource("/irma_configuration/").toURI();
+                URI CORE_LOCATION = MNOApplication.class.getClassLoader().getResource("/irma_configuration/").toURI();
                 DescriptionStore.setCoreLocation(CORE_LOCATION);
                 DescriptionStore.getInstance();
                 IdemixKeyStore.setCoreLocation(CORE_LOCATION);
                 IdemixKeyStore.getInstance();
-            } catch (URISyntaxException e2) {
-                e2.printStackTrace();
-                throw new RuntimeException(e2);
-            } catch (InfoException e2) {
+            } catch (URISyntaxException|InfoException e2) {
                 e2.printStackTrace();
                 throw new RuntimeException(e2);
             }

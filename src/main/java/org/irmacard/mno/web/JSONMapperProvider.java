@@ -37,6 +37,7 @@ import java.io.IOException;
 import javax.ws.rs.ext.ContextResolver;
 import javax.ws.rs.ext.Provider;
 
+import org.irmacard.api.common.ClientQr;
 import org.irmacard.mno.common.PassportDataMessage;
 import org.irmacard.mno.common.PassportVerificationResultMessage;
 import org.irmacard.mno.common.util.*;
@@ -69,9 +70,6 @@ public class JSONMapperProvider implements ContextResolver<ObjectMapper> {
         // Indent output
         mapper.configure(SerializationFeature.INDENT_OUTPUT, true);
 
-        // Improved ENUM handling
-        mapper.registerModule(getJSONEnumSerializer());
-
         // Special purpose data types serialization
         SimpleModule customSerDes = new SimpleModule();
 
@@ -83,6 +81,8 @@ public class JSONMapperProvider implements ContextResolver<ObjectMapper> {
 
         customSerDes.addDeserializer(PassportDataMessage.class, new PassportDataMessageDeserializer(PassportDataMessage.class));
 
+        customSerDes.addSerializer(new ClientQrSerializer(ClientQr.class));
+
         customSerDes.addSerializer(new PassportVerificationResultMessageSerializer(PassportVerificationResultMessage.class));
 
         mapper.registerModule(customSerDes);
@@ -91,41 +91,5 @@ public class JSONMapperProvider implements ContextResolver<ObjectMapper> {
     @Override
     public ObjectMapper getContext(Class<?> type) {
         return mapper;
-    }
-
-    /* Fancy ENUM handling, in particular encode the values as
-     * lower case representations of their Java enumeration constants.
-     * For example, the array of enums [ONE, TWO, THREE] is encoded
-     * as ["one", "two", "three"] in JSON (rather than ["ONE", "TWO",
-     * "THREE"]).
-     *
-     * Thanks to: http://stackoverflow.com/a/24173645
-     */
-    @SuppressWarnings("rawtypes")
-	private SimpleModule getJSONEnumSerializer() {
-		SimpleModule module = new SimpleModule();
-		module.setDeserializerModifier(new BeanDeserializerModifier() {
-			@Override
-			public JsonDeserializer<Enum> modifyEnumDeserializer(DeserializationConfig config, final JavaType type,
-					BeanDescription beanDesc, final JsonDeserializer<?> deserializer) {
-				return new JsonDeserializer<Enum>() {
-					@SuppressWarnings("unchecked")
-					@Override
-					public Enum deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException {
-						Class<? extends Enum> rawClass = (Class<Enum<?>>) type.getRawClass();
-						return Enum.valueOf(rawClass, jp.getValueAsString().toUpperCase());
-					}
-				};
-			}
-		});
-		module.addSerializer(Enum.class, new StdSerializer<Enum>(Enum.class) {
-			private static final long serialVersionUID = 1L;
-
-			@Override
-			public void serialize(Enum value, JsonGenerator jgen, SerializerProvider provider) throws IOException {
-				jgen.writeString(value.name().toLowerCase());
-			}
-		});
-		return module;
     }
 }

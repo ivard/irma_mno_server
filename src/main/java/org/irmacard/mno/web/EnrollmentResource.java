@@ -78,26 +78,22 @@ import net.sf.scuba.smartcards.ProtocolCommands;
 import net.sf.scuba.smartcards.ProtocolResponses;
 import org.jmrtd.lds.MRZInfo;
 
-@Path("v1")
 public class EnrollmentResource {
     private SecureRandom rnd;
 
     @Inject
-    private EnrollmentSessions sessions;
+    protected EnrollmentSessions sessions;
 
     private static final int SESSION_TOKEN_LENGTH = 33;
     private static final int AA_NONCE_LENGTH = 8;
 
-    private static final String ISSUER = "MijnOverheid";
+    protected static final String ISSUER = "MijnOverheid";
 
     @Inject
     public EnrollmentResource() {
         rnd = new SecureRandom();
     }
 
-    @GET
-    @Path("/start")
-    @Produces(MediaType.APPLICATION_JSON)
     public EnrollmentStartMessage start() {
         String sessionToken = generateSessionToken();
         byte[] nonce = generateAANonce();
@@ -108,11 +104,8 @@ public class EnrollmentResource {
         return session.getStartMessage();
     }
 
-    @POST
-    @Path("/verify-passport")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public PassportVerificationResultMessage startPassportVerification(PassportDataMessage passportData) {
+    public PassportVerificationResultMessage startPassportVerification(PassportDataMessage passportData)
+    throws InfoException {
         EnrollmentSession session = getSession(passportData);
 
         // Verify state of session
@@ -127,112 +120,14 @@ public class EnrollmentResource {
 
         if (result == PassportVerificationResult.SUCCESS) {
             session.setState(EnrollmentSession.State.PASSPORT_VERIFIED);
+            HashMap<String, HashMap<String, String>> credentialList = getCredentialList(session);
+            session.setCredentialList(credentialList);
         } else {
             // Verification failed, remove session
             sessions.remove(session);
         }
 
         return new PassportVerificationResultMessage(result);
-    }
-
-    @POST
-    @Path("/issue/credential-list")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Map<String, Map<String, String>> getCredentialList(BasicClientMessage startMessage)
-            throws InfoException, IOException {
-        EnrollmentSession session = getSession(startMessage);
-
-        // Verify state of session
-        // TODO Handle state
-        if (session.getState() != EnrollmentSession.State.PASSPORT_VERIFIED) {
-            // throw new WebApplicationException(Response.Status.UNAUTHORIZED);
-        }
-
-        Map<String, Map<String, String>> credentialList = getCredentialList(session);
-
-        session.setCredentialList(credentialList);
-
-        return credentialList;
-    }
-
-    @POST
-    @Path("/issue/{cred}/start")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public ProtocolCommands startCredentialIssuing(
-            RequestStartIssuanceMessage startMessage, @PathParam("cred") String cred)
-                    throws InfoException, CredentialsException {
-        EnrollmentSession session = getSession(startMessage);
-
-        // Verify state of session
-        if (session.getState() != EnrollmentSession.State.PASSPORT_VERIFIED) {
-            throw new WebApplicationException(Response.Status.UNAUTHORIZED);
-        }
-
-        // Check if we can issue this credential
-        if (!session.getCredentialList().containsKey(cred)) {
-            throw new WebApplicationException(Response.Status.UNAUTHORIZED);
-        }
-        Map<String, String> attributes = session.getCredentialList().get(cred);
-
-        // Setup raw attributes
-        Attributes rawAttributes = new Attributes();
-        CredentialDescription cd = getCredentialDescription(cred);
-        rawAttributes.setCredentialID(cd.getId());
-        for (Entry<String, String> entry : attributes.entrySet()) {
-            rawAttributes.add(entry.getKey(), entry.getValue().getBytes());
-        }
-        session.setRawAttributes(cred, rawAttributes);
-
-        IdemixCredentialDescription icd = new IdemixCredentialDescription(cd);
-        CardVersion cv = new CardVersion(startMessage.getCardVersion());
-        session.setCardVersion(cv);
-
-        BigInteger nonce1 = icd.generateNonce();
-        session.setNonce(cred, nonce1);
-
-        ProtocolCommands commands = IdemixSmartcard.requestIssueCommitmentCommands(cv, icd, rawAttributes, nonce1);
-
-        return commands;
-    }
-
-    @POST
-    @Path("/issue/{cred}/finish")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public ProtocolCommands finishCredentialIssuing(RequestFinishIssuanceMessage finishMessage,
-            @PathParam("cred") String cred) throws InfoException, CredentialsException {
-        EnrollmentSession session = getSession(finishMessage);
-        ProtocolResponses responses = finishMessage.getResponses();
-
-        // Verify state of session
-        if (session.getState() != EnrollmentSession.State.PASSPORT_VERIFIED) {
-            throw new WebApplicationException(Response.Status.UNAUTHORIZED);
-        }
-
-        // Check if we can issue this credential
-        if (!session.getCredentialList().containsKey(cred)) {
-            throw new WebApplicationException(Response.Status.UNAUTHORIZED);
-        }
-
-        // Retrieve issue-state
-        CredentialDescription cd = getCredentialDescription(cred);
-        IdemixCredentialDescription icd = new IdemixCredentialDescription(cd);
-        Attributes rawAttributes = session.getRawAttributes(cred);
-        BigInteger nonce1 = session.getNonce(cred);
-        CardVersion cv = session.getCardVersion();
-
-        // Initialize the issuer
-        IRMAIdemixIssuer issuer = new IRMAIdemixIssuer(icd.getPublicKey(),
-                IdemixKeyStore.getInstance().getSecretKey(cd), icd.getContext());
-
-        // TODO: check throws of issuer, can we relay this?
-        IssueCommitmentMessage commit_msg = IdemixSmartcard.processIssueCommitmentCommands(cv, responses);
-        IssueSignatureMessage signature_msg = issuer.issueSignature(commit_msg, icd, rawAttributes, nonce1);
-
-        ProtocolCommands commands = IdemixSmartcard.requestIssueSignatureCommands(cv, icd, signature_msg);
-        return commands;
     }
 
     /**
@@ -243,7 +138,7 @@ public class EnrollmentResource {
      *            the BasicClientMessage containing the sessionToken
      * @return the EnrollmentSession
      */
-    private EnrollmentSession getSession(BasicClientMessage message) {
+    protected EnrollmentSession getSession(BasicClientMessage message) {
         if (message == null) {
             throw new InputInvalidException("Supply a valid JSON object");
         }
@@ -284,8 +179,8 @@ public class EnrollmentResource {
         return nonce;
     }
 
-    private Map<String, Map<String, String>> getCredentialList(EnrollmentSession session) throws InfoException {
-        HashMap<String, Map<String, String>> credentials = new HashMap<String, Map<String, String>>();
+    protected HashMap<String, HashMap<String, String>> getCredentialList(EnrollmentSession session) throws InfoException {
+        HashMap<String, HashMap<String, String>> credentials = new HashMap<>();
         MRZInfo mrz;
         try {
             mrz = session.getPassportDataMessage().getDg1File().getMRZInfo();
@@ -428,7 +323,7 @@ public class EnrollmentResource {
         return msg.verify(nonce);
     }
 
-    private CredentialDescription getCredentialDescription(String cred) throws InfoException {
+    protected CredentialDescription getCredentialDescription(String cred) throws InfoException {
         return DescriptionStore.getInstance().getCredentialDescriptionByName(ISSUER, cred);
     }
 }

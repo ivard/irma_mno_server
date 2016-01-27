@@ -50,7 +50,7 @@ public class EnrollmentSession {
     private byte[] nonce;
     private State state;
     private PassportDataMessage passportData;
-    private Map<String, Map<String, String>> credentialList;
+    private HashMap<String, HashMap<String, String>> credentialList;
     private Map<String, Attributes> attributesList;
     private Map<String, BigInteger> nonceList;
     private CardVersion cardVersion;
@@ -88,11 +88,11 @@ public class EnrollmentSession {
         return passportData;
     }
 
-    public void setCredentialList(Map<String, Map<String, String>> credentialList) {
+    public void setCredentialList(HashMap<String, HashMap<String, String>> credentialList) {
         this.credentialList = credentialList;
     }
 
-    public Map<String, Map<String, String>> getCredentialList() {
+    public HashMap<String, HashMap<String, String>> getCredentialList() {
         return credentialList;
     }
 

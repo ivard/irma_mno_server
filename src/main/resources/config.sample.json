@@ -1,0 +1,9 @@
+{
+    // A sample configuration file.
+
+    // The URL to the IRMA API server; that is, a running instance of https://github.com/credentials/irma_api_server
+    "api_server": "https://www.example.com/irma_api_server/api/v2/issue/",
+
+    // The name that we put in our JWTs to the API server
+    "api_name": "MNOServer"
+}
