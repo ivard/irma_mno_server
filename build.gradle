@@ -1,6 +1,17 @@
 apply plugin: 'war'
-apply plugin: 'jetty'
 apply plugin: 'eclipse-wtp'
+apply plugin: 'org.akhikhl.gretty'
+
+buildscript {
+    repositories {
+        mavenLocal()
+        jcenter()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'org.akhikhl.gretty:gretty:1.2.4'
+    }
+}
 
 repositories {
     mavenLocal()
@@ -27,7 +38,9 @@ dependencies {
     testCompile 'org.glassfish.jersey.test-framework.providers:jersey-test-framework-provider-jetty:2.19'
 }
 
-jettyRun {
-    reload = "automatic"
-    scanIntervalSeconds = 1
+gretty {
+    contextConfigFile = file('src/test/resources/jetty-env.xml')
+    scanInterval = 10
+    inplaceMode = "hard"
+    httpsEnabled = true
 }
