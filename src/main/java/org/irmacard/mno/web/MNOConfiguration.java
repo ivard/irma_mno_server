@@ -1,6 +1,7 @@
 package org.irmacard.mno.web;
 
 import com.google.gson.JsonSyntaxException;
+import io.jsonwebtoken.SignatureAlgorithm;
 import org.irmacard.api.common.util.GsonUtil;
 
 import java.io.ByteArrayOutputStream;
@@ -8,6 +9,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.net.URLConnection;
+import java.security.KeyFactory;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
 
 @SuppressWarnings({"MismatchedQueryAndUpdateOfCollection", "FieldCanBeLocal", "unused"})
 public class MNOConfiguration {
@@ -16,6 +23,10 @@ public class MNOConfiguration {
 
 	private String api_server = "";
 	private String api_name = "";
+	private boolean sign_issue_jwts = true;
+	private String jwt_privatekey = "sk.der";
+
+	private transient PrivateKey jwtPrivateKey;
 
 	public MNOConfiguration() {}
 
@@ -50,6 +61,32 @@ public class MNOConfiguration {
 
 	public String getApiName() {
 		return api_name;
+	}
+
+	public boolean shouldSignJwt() {
+		return sign_issue_jwts;
+	}
+
+	public PrivateKey getJwtPrivateKey() throws KeyManagementException {
+		if (jwtPrivateKey == null) {
+			try {
+				byte[] bytes = MNOConfiguration.getResource(jwt_privatekey);
+				if (bytes == null || bytes.length == 0)
+					throw new KeyManagementException("Could not read private key");
+
+				PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(bytes);
+
+				jwtPrivateKey = KeyFactory.getInstance("RSA").generatePrivate(spec);
+			} catch (IOException|NoSuchAlgorithmException|InvalidKeySpecException e) {
+				throw new KeyManagementException(e);
+			}
+		}
+
+		return jwtPrivateKey;
+	}
+
+	public SignatureAlgorithm getJwtAlgorithm() {
+		return SignatureAlgorithm.RS256;
 	}
 
 	public static byte[] getResource(String filename) throws IOException {

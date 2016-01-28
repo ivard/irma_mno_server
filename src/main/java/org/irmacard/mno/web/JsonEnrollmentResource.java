@@ -1,8 +1,7 @@
 package org.irmacard.mno.web;
 
 import com.google.gson.JsonParseException;
-import com.google.gson.JsonSyntaxException;
-import org.glassfish.jersey.client.JerseyClient;
+import io.jsonwebtoken.Jwts;
 import org.glassfish.jersey.internal.util.Base64;
 import org.irmacard.api.common.ClientQr;
 import org.irmacard.api.common.CredentialRequest;
@@ -19,16 +18,14 @@ import org.irmacard.mno.common.PassportVerificationResult;
 import org.irmacard.mno.common.PassportVerificationResultMessage;
 
 import javax.ws.rs.*;
-import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
-import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.security.KeyManagementException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
-import java.util.Map;
 
 @Path("v2")
 public class JsonEnrollmentResource extends EnrollmentResource {
@@ -63,7 +60,7 @@ public class JsonEnrollmentResource extends EnrollmentResource {
 
 	private ClientQr createIssuingSession(HashMap<String, HashMap<String, String>> credentialList) {
 		String server = MNOConfiguration.getInstance().getApiServerUrl();
-		String jwt = getUnsignedIssuingJWT(credentialList);
+		String jwt = getIssuingJWT(credentialList);
 
 		// Post our JWT
 		String qrString = ClientBuilder.newClient().target(server)
@@ -92,36 +89,55 @@ public class JsonEnrollmentResource extends EnrollmentResource {
 		}
 	}
 
-	private String getUnsignedIssuingJWT(HashMap<String, HashMap<String, String>> credentialList) {
+	private String getIssuingJWT(HashMap<String, HashMap<String, String>> credentialList) {
+		return MNOConfiguration.getInstance().shouldSignJwt() ?
+				getSignedIssuingJWT(credentialList) :
+				getUnsignedIssuingJWT(credentialList);
+	}
+
+	private String getJwtClaims(HashMap<String, HashMap<String, String>> credentialList) {
+		HashMap<String, Object> claims = new HashMap<>(4);
+		claims.put("iprequest", getIdentityProviderRequest(credentialList));
+		claims.put("iat", System.currentTimeMillis()/1000);
+		claims.put("iss", MNOConfiguration.getInstance().getApiName());
+		claims.put("sub", "issue_request");
+
+		return GsonUtil.getGson().toJson(claims);
+	}
+
+	private String getSignedIssuingJWT(HashMap<String, HashMap<String, String>> credentialList) {
+		try {
+			return Jwts.builder()
+					.setPayload(getJwtClaims(credentialList))
+					.signWith(MNOConfiguration.getInstance().getJwtAlgorithm(),
+							MNOConfiguration.getInstance().getJwtPrivateKey())
+					.compact();
+		} catch (KeyManagementException e) {
+			throw new WebApplicationException(Response.Status.INTERNAL_SERVER_ERROR);
+		}
+	}
+
+	private IdentityProviderRequest getIdentityProviderRequest(HashMap<String, HashMap<String, String>> credentialList) {
 		// Calculate expiry date: 6 months from now
 		Calendar calendar = Calendar.getInstance();
 		calendar.add(Calendar.MONTH, 6);
-		long validity = ( calendar.getTimeInMillis() / Attributes.EXPIRY_FACTOR ) * Attributes.EXPIRY_FACTOR / 1000;
+		long validity = (calendar.getTimeInMillis() / Attributes.EXPIRY_FACTOR) * Attributes.EXPIRY_FACTOR / 1000;
 
 		// Compute credential list for in the issuing request
 		ArrayList<CredentialRequest> credentials = new ArrayList<>(credentialList.size());
 		for (String credName : credentialList.keySet())
 			credentials.add(new CredentialRequest(
-					(int)validity, ISSUER + "." + credName, credentialList.get(credName)));
+					(int) validity, ISSUER + "." + credName, credentialList.get(credName)));
 
 		// Create issuing request, encode as unsigned JWT
 		IssuingRequest request = new IssuingRequest(null, null, credentials);
-		IdentityProviderRequest ipRequest = new IdentityProviderRequest(
-				"", request, 120);
-		return getUnsignedJWT(ipRequest);
+		return new IdentityProviderRequest("", request, 120);
 	}
 
-	private String getUnsignedJWT(IdentityProviderRequest ipRequest) {
+	private String getUnsignedIssuingJWT(HashMap<String, HashMap<String, String>> credentialList) {
 		String header = encodeBase64("{\"typ\":\"JWT\",\"alg\":\"none\"}");
-
-		Map<String,Object> jwtBody = new HashMap<>(4);
-		jwtBody.put("iss", MNOConfiguration.getInstance().getApiName());
-		jwtBody.put("sub", "issue_request");
-		jwtBody.put("iat", System.currentTimeMillis() / 1000);
-		jwtBody.put("iprequest", ipRequest);
-		String json = GsonUtil.getGson().toJson(jwtBody);
-
-		return header + "." + encodeBase64(json) + ".";
+		String claims = encodeBase64(getJwtClaims(credentialList));
+		return header + "." + claims + ".";
 	}
 
 	private static String encodeBase64(String data) {

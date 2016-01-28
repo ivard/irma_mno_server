@@ -5,5 +5,11 @@
     "api_server": "https://www.example.com/irma_api_server/api/v2/issue/",
 
     // The name that we put in our JWTs to the API server
-    "api_name": "MNOServer"
+    "api_name": "MNOServer",
+
+    // If we should sign our issuing JWTs. If set to true, jwt_privatekey should also be set
+    "sign_issue_jwts": true,
+
+    // Name of the JWT private key in src/main/resources
+    "jwt_privatekey": "sk.der"
 }

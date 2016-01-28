@@ -1,2 +1,4 @@
 irma_configuration
 config.json
+*.der
+*.pem
