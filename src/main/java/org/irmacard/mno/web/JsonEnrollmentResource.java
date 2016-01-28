@@ -58,6 +58,11 @@ public class JsonEnrollmentResource extends EnrollmentResource {
 		return msg;
 	}
 
+	/**
+	 * Informs the API server of the credentials that we want issued, and returns the resulting session
+	 * @param credentialList The credentials and their attributes to issue
+	 * @return Serialized version number and URL to the APi server
+	 */
 	private ClientQr createIssuingSession(HashMap<String, HashMap<String, String>> credentialList) {
 		String server = MNOConfiguration.getInstance().getApiServerUrl();
 		String jwt = getIssuingJWT(credentialList);
@@ -95,16 +100,6 @@ public class JsonEnrollmentResource extends EnrollmentResource {
 				getUnsignedIssuingJWT(credentialList);
 	}
 
-	private String getJwtClaims(HashMap<String, HashMap<String, String>> credentialList) {
-		HashMap<String, Object> claims = new HashMap<>(4);
-		claims.put("iprequest", getIdentityProviderRequest(credentialList));
-		claims.put("iat", System.currentTimeMillis()/1000);
-		claims.put("iss", MNOConfiguration.getInstance().getApiName());
-		claims.put("sub", "issue_request");
-
-		return GsonUtil.getGson().toJson(claims);
-	}
-
 	private String getSignedIssuingJWT(HashMap<String, HashMap<String, String>> credentialList) {
 		try {
 			return Jwts.builder()
@@ -117,6 +112,28 @@ public class JsonEnrollmentResource extends EnrollmentResource {
 		}
 	}
 
+	private String getUnsignedIssuingJWT(HashMap<String, HashMap<String, String>> credentialList) {
+		String header = encodeBase64("{\"typ\":\"JWT\",\"alg\":\"none\"}");
+		String claims = encodeBase64(getJwtClaims(credentialList));
+		return header + "." + claims + ".";
+	}
+
+	/**
+	 * Serialize the credentials to be issued to the body (claims) of a JWT token
+	 */
+	private String getJwtClaims(HashMap<String, HashMap<String, String>> credentialList) {
+		HashMap<String, Object> claims = new HashMap<>(4);
+		claims.put("iprequest", getIdentityProviderRequest(credentialList));
+		claims.put("iat", System.currentTimeMillis()/1000);
+		claims.put("iss", MNOConfiguration.getInstance().getApiName());
+		claims.put("sub", "issue_request");
+
+		return GsonUtil.getGson().toJson(claims);
+	}
+
+	/**
+	 * Convert the credentials to be issued to an {@link IdentityProviderRequest} for the API server
+	 */
 	private IdentityProviderRequest getIdentityProviderRequest(HashMap<String, HashMap<String, String>> credentialList) {
 		// Calculate expiry date: 6 months from now
 		Calendar calendar = Calendar.getInstance();
@@ -132,12 +149,6 @@ public class JsonEnrollmentResource extends EnrollmentResource {
 		// Create issuing request, encode as unsigned JWT
 		IssuingRequest request = new IssuingRequest(null, null, credentials);
 		return new IdentityProviderRequest("", request, 120);
-	}
-
-	private String getUnsignedIssuingJWT(HashMap<String, HashMap<String, String>> credentialList) {
-		String header = encodeBase64("{\"typ\":\"JWT\",\"alg\":\"none\"}");
-		String claims = encodeBase64(getJwtClaims(credentialList));
-		return header + "." + claims + ".";
 	}
 
 	private static String encodeBase64(String data) {
