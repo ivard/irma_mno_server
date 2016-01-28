@@ -42,12 +42,16 @@ import org.glassfish.jersey.server.ResourceConfig;
 import org.irmacard.credentials.idemix.info.IdemixKeyStore;
 import org.irmacard.credentials.info.DescriptionStore;
 import org.irmacard.credentials.info.InfoException;
+import org.irmacard.mno.web.exceptions.MNOExceptionMapper;
 
 @ApplicationPath("/")
 public class MNOApplication extends ResourceConfig {
     public MNOApplication() {
         // Register our fancy JSON provider
         register(JSONMapperProvider.class);
+
+        // register exception handler, for converting and then returning exceptions as JSON output
+        register(MNOExceptionMapper.class);
 
         // Register Jackson provider
         register(JacksonFeature.class);
