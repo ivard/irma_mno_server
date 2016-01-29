@@ -38,6 +38,8 @@ import java.util.Map;
 
 import org.irmacard.credentials.Attributes;
 import org.irmacard.idemix.util.CardVersion;
+import org.irmacard.mno.common.DocumentDataMessage;
+import org.irmacard.mno.common.EDLDataMessage;
 import org.irmacard.mno.common.EnrollmentStartMessage;
 import org.irmacard.mno.common.PassportDataMessage;
 
@@ -49,7 +51,7 @@ public class EnrollmentSession {
     private String sessionToken;
     private byte[] nonce;
     private State state;
-    private PassportDataMessage passportData;
+    private DocumentDataMessage documentData;
     private HashMap<String, HashMap<String, String>> credentialList;
     private Map<String, Attributes> attributesList;
     private Map<String, BigInteger> nonceList;
@@ -80,12 +82,24 @@ public class EnrollmentSession {
         return new EnrollmentStartMessage(sessionToken, nonce);
     }
 
-    public void setPassportData(PassportDataMessage passportData) {
-        this.passportData = passportData;
+    public void setDocumentData(DocumentDataMessage documentData) {
+        this.documentData = documentData;
     }
 
     public PassportDataMessage getPassportDataMessage() {
-        return passportData;
+        try {
+            return (PassportDataMessage) documentData;
+        } catch (ClassCastException e) {
+            return null;
+        }
+    }
+
+    public EDLDataMessage getEDLDataMessage() {
+        try {
+            return (EDLDataMessage) documentData;
+        } catch (ClassCastException e) {
+            return null;
+        }
     }
 
     public void setCredentialList(HashMap<String, HashMap<String, String>> credentialList) {

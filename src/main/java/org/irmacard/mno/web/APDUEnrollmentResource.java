@@ -24,10 +24,11 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Path("v1")
-public class APDUEnrollmentResource extends EnrollmentResource {
+public class APDUEnrollmentResource extends PassportEnrollmentResource {
 	@GET
 	@Path("/start")
 	@Produces(MediaType.APPLICATION_JSON)
+	@Override
 	public EnrollmentStartMessage start() {
 		return super.start();
 	}
@@ -37,9 +38,10 @@ public class APDUEnrollmentResource extends EnrollmentResource {
 	@Path("/verify-passport")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
-	public PassportVerificationResultMessage startPassportVerification(PassportDataMessage passportData)
+	@Override
+	public PassportVerificationResultMessage verifyDocument(PassportDataMessage documentData)
 	throws InfoException {
-		return super.startPassportVerification(passportData);
+		return super.verifyDocument(documentData);
 	}
 
 	@POST

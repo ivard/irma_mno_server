@@ -32,53 +32,22 @@
 
 package org.irmacard.mno.web;
 
-import java.io.IOException;
-import java.math.BigInteger;
 import java.security.SecureRandom;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.Map.Entry;
 
 import javax.inject.Inject;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.codec.binary.Base64;
-import org.irmacard.credentials.Attributes;
-import org.irmacard.credentials.CredentialsException;
-import org.irmacard.credentials.idemix.descriptions.IdemixCredentialDescription;
-import org.irmacard.credentials.idemix.info.IdemixKeyStore;
-import org.irmacard.credentials.idemix.irma.IRMAIdemixIssuer;
-import org.irmacard.credentials.idemix.messages.IssueCommitmentMessage;
-import org.irmacard.credentials.idemix.messages.IssueSignatureMessage;
 import org.irmacard.credentials.info.CredentialDescription;
 import org.irmacard.credentials.info.DescriptionStore;
 import org.irmacard.credentials.info.InfoException;
-import org.irmacard.idemix.IdemixSmartcard;
-import org.irmacard.idemix.util.CardVersion;
-import org.irmacard.mno.common.BasicClientMessage;
-import org.irmacard.mno.common.EnrollmentStartMessage;
-import org.irmacard.mno.common.PassportDataMessage;
-import org.irmacard.mno.common.PassportVerificationResult;
-import org.irmacard.mno.common.PassportVerificationResultMessage;
-import org.irmacard.mno.common.RequestFinishIssuanceMessage;
-import org.irmacard.mno.common.RequestStartIssuanceMessage;
+import org.irmacard.mno.common.*;
 import org.irmacard.mno.web.exceptions.InputInvalidException;
 import org.irmacard.mno.web.exceptions.SessionUnknownException;
 
-import net.sf.scuba.smartcards.ProtocolCommands;
-import net.sf.scuba.smartcards.ProtocolResponses;
-import org.jmrtd.lds.MRZInfo;
-
-public class EnrollmentResource {
+abstract public class GenericEnrollmentResource<DocData extends DocumentDataMessage> {
     private SecureRandom rnd;
 
     @Inject
@@ -90,7 +59,7 @@ public class EnrollmentResource {
     protected static final String ISSUER = "MijnOverheid";
 
     @Inject
-    public EnrollmentResource() {
+    public GenericEnrollmentResource() {
         rnd = new SecureRandom();
     }
 
@@ -104,19 +73,22 @@ public class EnrollmentResource {
         return session.getStartMessage();
     }
 
-    public PassportVerificationResultMessage startPassportVerification(PassportDataMessage passportData)
+    /**
+     * Verify the document data, compute the resulting attributes, and store them in the session
+     */
+    public PassportVerificationResultMessage verifyDocument(DocData documentData)
     throws InfoException {
-        EnrollmentSession session = getSession(passportData);
+        EnrollmentSession session = getSession(documentData);
 
         // Verify state of session
         if (session.getState() != EnrollmentSession.State.STARTED) {
             throw new WebApplicationException(Response.Status.UNAUTHORIZED);
         }
 
-        session.setPassportData(passportData);
+        session.setDocumentData(documentData);
 
         // Check the passport data
-        PassportVerificationResult result = verifyPassportData(passportData, session.getStartMessage().getNonce());
+        PassportVerificationResult result = verifyPassportData(documentData, session.getStartMessage().getNonce());
 
         if (result == PassportVerificationResult.SUCCESS) {
             session.setState(EnrollmentSession.State.PASSPORT_VERIFIED);
@@ -179,63 +151,8 @@ public class EnrollmentResource {
         return nonce;
     }
 
-    protected HashMap<String, HashMap<String, String>> getCredentialList(EnrollmentSession session) throws InfoException {
-        HashMap<String, HashMap<String, String>> credentials = new HashMap<>();
-        MRZInfo mrz;
-        try {
-            mrz = session.getPassportDataMessage().getDg1File().getMRZInfo();
-        } catch (NullPointerException e) {
-            throw new InfoException("Cannot retrieve MRZ info");
-        }
-
-        SimpleDateFormat bacDateFormat = new SimpleDateFormat("yyMMdd");
-        SimpleDateFormat hrDateFormat = new SimpleDateFormat("MMM d, y"); // Matches Android's default date format
-        Date dob;
-        Date expiry;
-
-        try {
-            dob = bacDateFormat.parse(mrz.getDateOfBirth());
-            expiry = bacDateFormat.parse(mrz.getDateOfExpiry());
-        }  catch (ParseException e) {
-            e.printStackTrace();
-            throw new InfoException("Failed to parse MRZ", e);
-        }
-
-        int[] lowAges = {12,16,18,21};
-        credentials.put("ageLower", ageAttributes(lowAges, dob));
-
-        int[] highAges = {50, 60, 65, 75};
-        credentials.put("ageHigher", ageAttributes(highAges, dob));
-
-        HashMap<String,String> nameAttributes = new HashMap<>();
-        String[] nameParts = splitFamilyName(mrz.getPrimaryIdentifier());
-        String firstnames = toTitleCase(joinStrings(mrz.getSecondaryIdentifierComponents()));
-        // The first of the first names is not always the person's usual name ("roepnaam"). In fact, the person's
-        // usual name need not even be in his list of first names at all. But given only the MRZ, there is no way of
-        // knowing what is his/her usual name... So we can only guess.
-        String firstname = toTitleCase(mrz.getSecondaryIdentifierComponents()[0]);
-
-        nameAttributes.put("familyname", toTitleCase(nameParts[1]));
-        nameAttributes.put("prefix", nameParts[0]);
-        nameAttributes.put("firstnames", firstnames);
-        nameAttributes.put("firstname", firstname);
-
-        credentials.put("fullName", nameAttributes);
-
-        HashMap<String, String> idDocumentAttributes = new HashMap<String, String>();
-        idDocumentAttributes.put("number", mrz.getDocumentNumber());
-        idDocumentAttributes.put("expires", hrDateFormat.format(expiry));
-        idDocumentAttributes.put("nationality", mrz.getNationality());
-        if (mrz.getDocumentType() == MRZInfo.DOC_TYPE_ID1)
-            idDocumentAttributes.put("type", "ID card");
-        else if (mrz.getDocumentType() == MRZInfo.DOC_TYPE_ID3)
-            idDocumentAttributes.put("type", "Passport");
-        else
-            idDocumentAttributes.put("type", "unknown");
-        credentials.put("idDocument", idDocumentAttributes);
-
-        return credentials;
-    }
+    abstract protected HashMap<String, HashMap<String, String>> getCredentialList(EnrollmentSession session)
+    throws InfoException;
 
     /**
      * Try to split the family name in into a prefix and a proper part, using a list of commonly occuring (Dutch)
@@ -318,7 +235,7 @@ public class EnrollmentResource {
         return attrs;
     }
 
-    private PassportVerificationResult verifyPassportData(PassportDataMessage msg, byte[] nonce) {
+    private PassportVerificationResult verifyPassportData(DocumentDataMessage msg, byte[] nonce) {
         // TODO: query MNO DB
         return msg.verify(nonce);
     }

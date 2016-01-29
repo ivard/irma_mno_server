@@ -12,10 +12,7 @@ import org.irmacard.api.common.exceptions.ApiException;
 import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.info.InfoException;
-import org.irmacard.mno.common.EnrollmentStartMessage;
-import org.irmacard.mno.common.PassportDataMessage;
-import org.irmacard.mno.common.PassportVerificationResult;
-import org.irmacard.mno.common.PassportVerificationResultMessage;
+import org.irmacard.mno.common.*;
 
 import javax.ws.rs.*;
 import javax.ws.rs.client.ClientBuilder;
@@ -28,10 +25,11 @@ import java.util.Calendar;
 import java.util.HashMap;
 
 @Path("v2")
-public class JsonEnrollmentResource extends EnrollmentResource {
+public class JsonEnrollmentResource extends PassportEnrollmentResource {
 	@GET
 	@Path("/start")
 	@Produces(MediaType.APPLICATION_JSON)
+	@Override
 	public EnrollmentStartMessage start() {
 		return super.start();
 	}
@@ -41,10 +39,11 @@ public class JsonEnrollmentResource extends EnrollmentResource {
 	@Path("/verify-passport")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
-	public PassportVerificationResultMessage startPassportVerification(PassportDataMessage passportData)
+	@Override
+	public PassportVerificationResultMessage verifyDocument(PassportDataMessage documentData)
 	throws InfoException {
 		// Let super verify the passport message, and compute the resulting credentials
-		PassportVerificationResultMessage msg = super.startPassportVerification(passportData);
+		PassportVerificationResultMessage msg = super.verifyDocument(documentData);
 
 		// Check if super succeeded in verifying the passport
 		if (msg.getResult() != PassportVerificationResult.SUCCESS) {
@@ -52,7 +51,7 @@ public class JsonEnrollmentResource extends EnrollmentResource {
 		}
 
 		// Passport was succesfull; create issuing session with the API server
-		HashMap<String, HashMap<String, String>> creds = getSession(passportData).getCredentialList();
+		HashMap<String, HashMap<String, String>> creds = getSession(documentData).getCredentialList();
 		msg.setIssueQr(createIssuingSession(creds));
 
 		return msg;
