@@ -37,7 +37,6 @@ import java.net.URISyntaxException;
 
 import javax.ws.rs.ApplicationPath;
 
-import org.glassfish.jersey.jackson.JacksonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.irmacard.credentials.idemix.info.IdemixKeyStore;
 import org.irmacard.credentials.info.DescriptionStore;
@@ -47,14 +46,11 @@ import org.irmacard.mno.web.exceptions.MNOExceptionMapper;
 @ApplicationPath("/")
 public class MNOApplication extends ResourceConfig {
     public MNOApplication() {
-        // Register our fancy JSON provider
-        register(JSONMapperProvider.class);
+        // register Gson
+        register(GsonJerseyProvider.class);
 
         // register exception handler, for converting and then returning exceptions as JSON output
         register(MNOExceptionMapper.class);
-
-        // Register Jackson provider
-        register(JacksonFeature.class);
 
         // register enrollment applications
         register(APDUEnrollmentResource.class);

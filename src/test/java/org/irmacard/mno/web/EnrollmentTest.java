@@ -42,7 +42,6 @@ import javax.ws.rs.core.Application;
 import javax.ws.rs.core.MediaType;
 
 import org.glassfish.jersey.client.ClientConfig;
-import org.glassfish.jersey.jackson.JacksonFeature;
 import org.glassfish.jersey.test.JerseyTest;
 import org.glassfish.jersey.test.TestProperties;
 import org.glassfish.jersey.test.jetty.JettyTestContainerFactory;
@@ -104,8 +103,7 @@ public class EnrollmentTest extends JerseyTest {
 
     @Override
     protected void configureClient(ClientConfig config) {
-        config.register(JSONMapperProvider.class);
-        config.register(JacksonFeature.class);
+        config.register(GsonJerseyProvider.class);
     }
 
     @Test

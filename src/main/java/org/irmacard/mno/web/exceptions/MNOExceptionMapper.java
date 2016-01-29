@@ -15,8 +15,15 @@ public class MNOExceptionMapper implements ExceptionMapper<Throwable> {
 	public Response toResponse(Throwable ex) {
 		ApiErrorMessage message = new ApiErrorMessage(ex);
 
+		System.out.println("Exception:");
+		System.out.println(message.getStatus()
+				+ " " + message.getError().toString()
+				+ ", description: " + message.getDescription()
+				+ ", message: " + message.getMessage());
+		System.out.println(ApiErrorMessage.getExceptionStacktrace(ex));
+
 		return Response.status(message.getStatus())
-				.entity(GsonUtil.getGson().toJson(message))
+				.entity(message)
 				.type(MediaType.APPLICATION_JSON)
 				.build();
 	}

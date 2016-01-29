@@ -113,4 +113,9 @@ public class MNOConfiguration {
 		os.close();
 		return os.toByteArray();
 	}
+
+	@Override
+	public String toString() {
+		return GsonUtil.getGson().toJson(this);
+	}
 }
