@@ -56,7 +56,7 @@ abstract public class GenericEnrollmentResource<DocData extends DocumentDataMess
     private static final int SESSION_TOKEN_LENGTH = 33;
     private static final int AA_NONCE_LENGTH = 8;
 
-    protected static final String ISSUER = "MijnOverheid";
+    public static final String ISSUER = "MijnOverheid";
 
     @Inject
     public GenericEnrollmentResource() {
