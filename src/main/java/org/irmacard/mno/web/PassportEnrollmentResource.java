@@ -15,7 +15,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 
-@Path("v2")
+@Path("v2/passport")
 public class PassportEnrollmentResource extends GenericEnrollmentResource<PassportDataMessage> {
 	@GET
 	@Path("/start")
@@ -26,25 +26,13 @@ public class PassportEnrollmentResource extends GenericEnrollmentResource<Passpo
 	}
 
 	@POST
-	@Path("/verify-passport")
+	@Path("/verify-document")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
 	@Override
 	public PassportVerificationResultMessage verifyDocument(PassportDataMessage documentData)
 			throws InfoException {
-		// Let super verify the passport message, and compute the resulting credentials
-		PassportVerificationResultMessage msg = super.verifyDocument(documentData);
-
-		// Check if super succeeded in verifying the passport
-		if (msg.getResult() != PassportVerificationResult.SUCCESS) {
-			return msg;
-		}
-
-		// Passport was succesfull; create issuing session with the API server
-		HashMap<CredentialIdentifier, HashMap<String, String>> creds = getSession(documentData).getCredentialList();
-		msg.setIssueQr(ApiClient.createIssuingSession(creds));
-
-		return msg;
+		return super.verifyDocument(documentData);
 	}
 
 	@Override

@@ -90,18 +90,21 @@ abstract public class GenericEnrollmentResource<DocData extends DocumentDataMess
         session.setDocumentData(documentData);
 
         // Check the passport data
-        PassportVerificationResult result = verifyPassportData(documentData, session.getStartMessage().getNonce());
+        PassportVerificationResult result = verifyDocumentData(documentData, session.getStartMessage().getNonce());
+        PassportVerificationResultMessage msg = new PassportVerificationResultMessage(result);
 
-        if (result == PassportVerificationResult.SUCCESS) {
-            session.setState(EnrollmentSession.State.PASSPORT_VERIFIED);
-            HashMap<CredentialIdentifier, HashMap<String, String>> credentialList = getCredentialList(session);
-            session.setCredentialList(credentialList);
-        } else {
+        if (result != PassportVerificationResult.SUCCESS) {
             // Verification failed, remove session
             sessions.remove(session);
+            return msg;
         }
 
-        return new PassportVerificationResultMessage(result);
+        session.setState(EnrollmentSession.State.PASSPORT_VERIFIED);
+        HashMap<CredentialIdentifier, HashMap<String, String>> credentialList = getCredentialList(session);
+        session.setCredentialList(credentialList);
+        msg.setIssueQr(ApiClient.createIssuingSession(credentialList));
+
+        return msg;
     }
 
     /**
@@ -237,7 +240,7 @@ abstract public class GenericEnrollmentResource<DocData extends DocumentDataMess
         return attrs;
     }
 
-    private PassportVerificationResult verifyPassportData(DocumentDataMessage msg, byte[] nonce) {
+    private PassportVerificationResult verifyDocumentData(DocumentDataMessage msg, byte[] nonce) {
         // TODO: query MNO DB
         return msg.verify(nonce);
     }
