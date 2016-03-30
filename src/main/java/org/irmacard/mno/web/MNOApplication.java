@@ -56,6 +56,7 @@ public class MNOApplication extends ResourceConfig {
 
         // register enrollment applications
         register(PassportEnrollmentResource.class);
+        register(DLEnrollmentResource.class);
 
         // register session state
         register(new EnrollmentSessionsBinder());
