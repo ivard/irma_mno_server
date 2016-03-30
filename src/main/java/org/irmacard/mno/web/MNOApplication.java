@@ -55,8 +55,7 @@ public class MNOApplication extends ResourceConfig {
         register(MNOExceptionMapper.class);
 
         // register enrollment applications
-        register(APDUEnrollmentResource.class);
-        register(JsonEnrollmentResource.class);
+        register(PassportEnrollmentResource.class);
 
         // register session state
         register(new EnrollmentSessionsBinder());

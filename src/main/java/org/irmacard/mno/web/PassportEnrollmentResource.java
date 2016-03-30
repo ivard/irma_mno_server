@@ -2,15 +2,51 @@ package org.irmacard.mno.web;
 
 import org.irmacard.credentials.info.CredentialIdentifier;
 import org.irmacard.credentials.info.InfoException;
+import org.irmacard.mno.common.EnrollmentStartMessage;
 import org.irmacard.mno.common.PassportDataMessage;
+import org.irmacard.mno.common.PassportVerificationResult;
+import org.irmacard.mno.common.PassportVerificationResultMessage;
 import org.jmrtd.lds.MRZInfo;
 
+import javax.ws.rs.*;
+import javax.ws.rs.core.MediaType;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 
+@Path("v2")
 public class PassportEnrollmentResource extends GenericEnrollmentResource<PassportDataMessage> {
+	@GET
+	@Path("/start")
+	@Produces(MediaType.APPLICATION_JSON)
+	@Override
+	public EnrollmentStartMessage start() {
+		return super.start();
+	}
+
+	@POST
+	@Path("/verify-passport")
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.APPLICATION_JSON)
+	@Override
+	public PassportVerificationResultMessage verifyDocument(PassportDataMessage documentData)
+			throws InfoException {
+		// Let super verify the passport message, and compute the resulting credentials
+		PassportVerificationResultMessage msg = super.verifyDocument(documentData);
+
+		// Check if super succeeded in verifying the passport
+		if (msg.getResult() != PassportVerificationResult.SUCCESS) {
+			return msg;
+		}
+
+		// Passport was succesfull; create issuing session with the API server
+		HashMap<CredentialIdentifier, HashMap<String, String>> creds = getSession(documentData).getCredentialList();
+		msg.setIssueQr(ApiClient.createIssuingSession(creds));
+
+		return msg;
+	}
+
 	@Override
 	protected HashMap<CredentialIdentifier, HashMap<String, String>> getCredentialList(EnrollmentSession session)
 	throws InfoException {
