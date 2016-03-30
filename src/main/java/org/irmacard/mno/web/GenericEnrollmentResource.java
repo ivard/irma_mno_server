@@ -41,6 +41,7 @@ import javax.ws.rs.core.Response;
 
 import org.apache.commons.codec.binary.Base64;
 import org.irmacard.credentials.info.CredentialDescription;
+import org.irmacard.credentials.info.CredentialIdentifier;
 import org.irmacard.credentials.info.DescriptionStore;
 import org.irmacard.credentials.info.InfoException;
 import org.irmacard.mno.common.*;
@@ -56,6 +57,7 @@ abstract public class GenericEnrollmentResource<DocData extends DocumentDataMess
     private static final int SESSION_TOKEN_LENGTH = 33;
     private static final int AA_NONCE_LENGTH = 8;
 
+    public static final String SCHEME_MANAGER = "irma-demo";
     public static final String ISSUER = "MijnOverheid";
 
     @Inject
@@ -92,7 +94,7 @@ abstract public class GenericEnrollmentResource<DocData extends DocumentDataMess
 
         if (result == PassportVerificationResult.SUCCESS) {
             session.setState(EnrollmentSession.State.PASSPORT_VERIFIED);
-            HashMap<String, HashMap<String, String>> credentialList = getCredentialList(session);
+            HashMap<CredentialIdentifier, HashMap<String, String>> credentialList = getCredentialList(session);
             session.setCredentialList(credentialList);
         } else {
             // Verification failed, remove session
@@ -151,7 +153,7 @@ abstract public class GenericEnrollmentResource<DocData extends DocumentDataMess
         return nonce;
     }
 
-    abstract protected HashMap<String, HashMap<String, String>> getCredentialList(EnrollmentSession session)
+    abstract protected HashMap<CredentialIdentifier, HashMap<String, String>> getCredentialList(EnrollmentSession session)
     throws InfoException;
 
     /**
@@ -240,7 +242,7 @@ abstract public class GenericEnrollmentResource<DocData extends DocumentDataMess
         return msg.verify(nonce);
     }
 
-    protected CredentialDescription getCredentialDescription(String cred) throws InfoException {
-        return DescriptionStore.getInstance().getCredentialDescriptionByName(ISSUER, cred);
+    protected CredentialDescription getCredentialDescription(CredentialIdentifier cred) throws InfoException {
+        return DescriptionStore.getInstance().getCredentialDescription(cred);
     }
 }

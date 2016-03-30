@@ -37,6 +37,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.irmacard.credentials.Attributes;
+import org.irmacard.credentials.info.CredentialIdentifier;
 import org.irmacard.idemix.util.CardVersion;
 import org.irmacard.mno.common.DocumentDataMessage;
 import org.irmacard.mno.common.EDLDataMessage;
@@ -52,9 +53,9 @@ public class EnrollmentSession {
     private byte[] nonce;
     private State state;
     private DocumentDataMessage documentData;
-    private HashMap<String, HashMap<String, String>> credentialList;
-    private Map<String, Attributes> attributesList;
-    private Map<String, BigInteger> nonceList;
+    private HashMap<CredentialIdentifier, HashMap<String, String>> credentialList;
+    private Map<CredentialIdentifier, Attributes> attributesList;
+    private Map<CredentialIdentifier, BigInteger> nonceList;
     private CardVersion cardVersion;
 
     public EnrollmentSession(String sessionToken, byte[] nonce) {
@@ -62,8 +63,8 @@ public class EnrollmentSession {
         this.nonce = nonce;
         this.state = State.STARTED;
 
-        attributesList = new HashMap<String, Attributes>();
-        nonceList = new HashMap<String, BigInteger>();
+        attributesList = new HashMap<CredentialIdentifier, Attributes>();
+        nonceList = new HashMap<CredentialIdentifier, BigInteger>();
     }
 
     public String getSessionToken() {
@@ -102,27 +103,27 @@ public class EnrollmentSession {
         }
     }
 
-    public void setCredentialList(HashMap<String, HashMap<String, String>> credentialList) {
+    public void setCredentialList(HashMap<CredentialIdentifier, HashMap<String, String>> credentialList) {
         this.credentialList = credentialList;
     }
 
-    public HashMap<String, HashMap<String, String>> getCredentialList() {
+    public HashMap<CredentialIdentifier, HashMap<String, String>> getCredentialList() {
         return credentialList;
     }
 
-    public void setRawAttributes(String cred, Attributes rawAttributes) {
+    public void setRawAttributes(CredentialIdentifier cred, Attributes rawAttributes) {
         attributesList.put(cred, rawAttributes);
     }
 
-    public Attributes getRawAttributes(String cred) {
+    public Attributes getRawAttributes(CredentialIdentifier cred) {
         return attributesList.get(cred);
     }
 
-    public void setNonce(String cred, BigInteger nonce1) {
+    public void setNonce(CredentialIdentifier cred, BigInteger nonce1) {
         nonceList.put(cred, nonce1);
     }
 
-    public BigInteger getNonce(String cred) {
+    public BigInteger getNonce(CredentialIdentifier cred) {
         return nonceList.get(cred);
     }
 

@@ -39,7 +39,9 @@ import javax.ws.rs.ApplicationPath;
 
 import org.glassfish.jersey.server.ResourceConfig;
 import org.irmacard.credentials.idemix.info.IdemixKeyStore;
+import org.irmacard.credentials.idemix.info.IdemixKeyStoreDeserializer;
 import org.irmacard.credentials.info.DescriptionStore;
+import org.irmacard.credentials.info.DescriptionStoreDeserializer;
 import org.irmacard.credentials.info.InfoException;
 import org.irmacard.mno.web.exceptions.MNOExceptionMapper;
 
@@ -60,17 +62,15 @@ public class MNOApplication extends ResourceConfig {
         register(new EnrollmentSessionsBinder());
 
         // Setup Core location for IRMA
-        if (!DescriptionStore.isLocationSet() || !IdemixKeyStore.isLocationSet()) {
-            try {
+        try {
+            if (!DescriptionStore.isInitialized() || !IdemixKeyStore.isInitialized()) {
                 URI CORE_LOCATION = MNOApplication.class.getClassLoader().getResource("/irma_configuration/").toURI();
-                DescriptionStore.setCoreLocation(CORE_LOCATION);
-                DescriptionStore.getInstance();
-                IdemixKeyStore.setCoreLocation(CORE_LOCATION);
-                IdemixKeyStore.getInstance();
-            } catch (URISyntaxException|InfoException e2) {
-                e2.printStackTrace();
-                throw new RuntimeException(e2);
+                DescriptionStore.initialize(new DescriptionStoreDeserializer(CORE_LOCATION));
+                IdemixKeyStore.initialize(new IdemixKeyStoreDeserializer(CORE_LOCATION));
             }
+        } catch (URISyntaxException|InfoException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
         }
     }
 }

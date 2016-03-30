@@ -11,6 +11,7 @@ import org.irmacard.api.common.exceptions.ApiErrorMessage;
 import org.irmacard.api.common.exceptions.ApiException;
 import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.credentials.Attributes;
+import org.irmacard.credentials.info.CredentialIdentifier;
 
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.client.ClientBuilder;
@@ -31,7 +32,7 @@ public class ApiClient {
 	 * @param credentialList The credentials and their attributes to issue
 	 * @return Serialized version number and URL to the APi server
 	 */
-	public static ClientQr createIssuingSession(HashMap<String, HashMap<String, String>> credentialList) {
+	public static ClientQr createIssuingSession(HashMap<CredentialIdentifier, HashMap<String, String>> credentialList) {
 		String server = MNOConfiguration.getInstance().getApiServerUrl();
 		String jwt = getIssuingJWT(credentialList);
 
@@ -62,13 +63,13 @@ public class ApiClient {
 		}
 	}
 
-	private static String getIssuingJWT(HashMap<String, HashMap<String, String>> credentialList) {
+	private static String getIssuingJWT(HashMap<CredentialIdentifier, HashMap<String, String>> credentialList) {
 		return MNOConfiguration.getInstance().shouldSignJwt() ?
 				getSignedIssuingJWT(credentialList) :
 				getUnsignedIssuingJWT(credentialList);
 	}
 
-	private static String getSignedIssuingJWT(HashMap<String, HashMap<String, String>> credentialList) {
+	private static String getSignedIssuingJWT(HashMap<CredentialIdentifier, HashMap<String, String>> credentialList) {
 		try {
 			return Jwts.builder()
 					.setPayload(getJwtClaims(credentialList))
@@ -80,7 +81,7 @@ public class ApiClient {
 		}
 	}
 
-	private static String getUnsignedIssuingJWT(HashMap<String, HashMap<String, String>> credentialList) {
+	private static String getUnsignedIssuingJWT(HashMap<CredentialIdentifier, HashMap<String, String>> credentialList) {
 		String header = encodeBase64("{\"typ\":\"JWT\",\"alg\":\"none\"}");
 		String claims = encodeBase64(getJwtClaims(credentialList));
 		return header + "." + claims + ".";
@@ -89,7 +90,7 @@ public class ApiClient {
 	/**
 	 * Serialize the credentials to be issued to the body (claims) of a JWT token
 	 */
-	private static String getJwtClaims(HashMap<String, HashMap<String, String>> credentialList) {
+	private static String getJwtClaims(HashMap<CredentialIdentifier, HashMap<String, String>> credentialList) {
 		HashMap<String, Object> claims = new HashMap<>(4);
 		claims.put("iprequest", getIdentityProviderRequest(credentialList));
 		claims.put("iat", System.currentTimeMillis()/1000);
@@ -102,7 +103,7 @@ public class ApiClient {
 	/**
 	 * Convert the credentials to be issued to an {@link IdentityProviderRequest} for the API server
 	 */
-	private static IdentityProviderRequest getIdentityProviderRequest(HashMap<String, HashMap<String, String>> credentialList) {
+	private static IdentityProviderRequest getIdentityProviderRequest(HashMap<CredentialIdentifier, HashMap<String, String>> credentialList) {
 		// Calculate expiry date: 6 months from now
 		Calendar calendar = Calendar.getInstance();
 		calendar.add(Calendar.MONTH, 6);
@@ -110,9 +111,9 @@ public class ApiClient {
 
 		// Compute credential list for in the issuing request
 		ArrayList<CredentialRequest> credentials = new ArrayList<>(credentialList.size());
-		for (String credName : credentialList.keySet())
+		for (CredentialIdentifier identifier : credentialList.keySet())
 			credentials.add(new CredentialRequest(
-					(int) validity, GenericEnrollmentResource.ISSUER + "." + credName, credentialList.get(credName)));
+					(int) validity, identifier.toString(), credentialList.get(identifier)));
 
 		// Create issuing request, encode as unsigned JWT
 		IssuingRequest request = new IssuingRequest(null, null, credentials);

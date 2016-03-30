@@ -11,6 +11,7 @@ import org.irmacard.api.common.exceptions.ApiErrorMessage;
 import org.irmacard.api.common.exceptions.ApiException;
 import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.credentials.Attributes;
+import org.irmacard.credentials.info.CredentialIdentifier;
 import org.irmacard.credentials.info.InfoException;
 import org.irmacard.mno.common.*;
 
@@ -51,7 +52,7 @@ public class JsonEnrollmentResource extends PassportEnrollmentResource {
 		}
 
 		// Passport was succesfull; create issuing session with the API server
-		HashMap<String, HashMap<String, String>> creds = getSession(documentData).getCredentialList();
+		HashMap<CredentialIdentifier, HashMap<String, String>> creds = getSession(documentData).getCredentialList();
 		msg.setIssueQr(ApiClient.createIssuingSession(creds));
 
 		return msg;

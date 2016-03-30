@@ -1,5 +1,6 @@
 package org.irmacard.mno.web;
 
+import org.irmacard.credentials.info.CredentialIdentifier;
 import org.irmacard.credentials.info.InfoException;
 import org.irmacard.mno.common.EDLDataMessage;
 import org.irmacard.mno.common.EnrollmentStartMessage;
@@ -30,7 +31,7 @@ public class DLEnrollmentResource extends GenericEnrollmentResource<EDLDataMessa
 	}
 
 	@Override
-	protected HashMap<String, HashMap<String, String>> getCredentialList(EnrollmentSession session)
+	protected HashMap<CredentialIdentifier, HashMap<String, String>> getCredentialList(EnrollmentSession session)
 	throws InfoException { // TODO
 		return null;
 	}

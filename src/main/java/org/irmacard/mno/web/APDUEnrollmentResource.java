@@ -10,6 +10,7 @@ import org.irmacard.credentials.idemix.irma.IRMAIdemixIssuer;
 import org.irmacard.credentials.idemix.messages.IssueCommitmentMessage;
 import org.irmacard.credentials.idemix.messages.IssueSignatureMessage;
 import org.irmacard.credentials.info.CredentialDescription;
+import org.irmacard.credentials.info.CredentialIdentifier;
 import org.irmacard.credentials.info.InfoException;
 import org.irmacard.idemix.IdemixSmartcard;
 import org.irmacard.idemix.util.CardVersion;
@@ -48,7 +49,7 @@ public class APDUEnrollmentResource extends PassportEnrollmentResource {
 	@Path("/issue/credential-list")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
-	public HashMap<String, HashMap<String, String>> getCredentialList(BasicClientMessage startMessage)
+	public HashMap<CredentialIdentifier, HashMap<String, String>> getCredentialList(BasicClientMessage startMessage)
 			throws InfoException, IOException {
 		EnrollmentSession session = getSession(startMessage);
 
@@ -66,7 +67,7 @@ public class APDUEnrollmentResource extends PassportEnrollmentResource {
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
 	public ProtocolCommands startCredentialIssuing(
-			RequestStartIssuanceMessage startMessage, @PathParam("cred") String cred)
+			RequestStartIssuanceMessage startMessage, @PathParam("cred") CredentialIdentifier cred)
 			throws InfoException, CredentialsException {
 		EnrollmentSession session = getSession(startMessage);
 
@@ -107,7 +108,8 @@ public class APDUEnrollmentResource extends PassportEnrollmentResource {
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
 	public ProtocolCommands finishCredentialIssuing(RequestFinishIssuanceMessage finishMessage,
-	                                                @PathParam("cred") String cred) throws InfoException, CredentialsException {
+	                                                @PathParam("cred") CredentialIdentifier cred)
+	throws InfoException, CredentialsException {
 		EnrollmentSession session = getSession(finishMessage);
 		ProtocolResponses responses = finishMessage.getResponses();
 

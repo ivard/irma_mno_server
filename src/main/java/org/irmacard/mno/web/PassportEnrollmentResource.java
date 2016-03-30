@@ -1,5 +1,6 @@
 package org.irmacard.mno.web;
 
+import org.irmacard.credentials.info.CredentialIdentifier;
 import org.irmacard.credentials.info.InfoException;
 import org.irmacard.mno.common.PassportDataMessage;
 import org.jmrtd.lds.MRZInfo;
@@ -11,8 +12,9 @@ import java.util.HashMap;
 
 public class PassportEnrollmentResource extends GenericEnrollmentResource<PassportDataMessage> {
 	@Override
-	protected HashMap<String, HashMap<String, String>> getCredentialList(EnrollmentSession session) throws InfoException {
-		HashMap<String, HashMap<String, String>> credentials = new HashMap<>();
+	protected HashMap<CredentialIdentifier, HashMap<String, String>> getCredentialList(EnrollmentSession session)
+	throws InfoException {
+		HashMap<CredentialIdentifier, HashMap<String, String>> credentials = new HashMap<>();
 		MRZInfo mrz;
 		try {
 			mrz = session.getPassportDataMessage().getDg1File().getMRZInfo();
@@ -34,10 +36,10 @@ public class PassportEnrollmentResource extends GenericEnrollmentResource<Passpo
 		}
 
 		int[] lowAges = {12,16,18,21};
-		credentials.put("ageLower", ageAttributes(lowAges, dob));
+		credentials.put(new CredentialIdentifier(SCHEME_MANAGER, ISSUER, "ageLower"), ageAttributes(lowAges, dob));
 
 		int[] highAges = {50, 60, 65, 75};
-		credentials.put("ageHigher", ageAttributes(highAges, dob));
+		credentials.put(new CredentialIdentifier(SCHEME_MANAGER, ISSUER, "ageHigher"), ageAttributes(highAges, dob));
 
 		HashMap<String,String> nameAttributes = new HashMap<>();
 		String[] nameParts = splitFamilyName(mrz.getPrimaryIdentifier());
@@ -52,7 +54,7 @@ public class PassportEnrollmentResource extends GenericEnrollmentResource<Passpo
 		nameAttributes.put("firstnames", firstnames);
 		nameAttributes.put("firstname", firstname);
 
-		credentials.put("fullName", nameAttributes);
+		credentials.put(new CredentialIdentifier(SCHEME_MANAGER, ISSUER, "fullName"), nameAttributes);
 
 		HashMap<String, String> idDocumentAttributes = new HashMap<String, String>();
 		idDocumentAttributes.put("number", mrz.getDocumentNumber());
@@ -64,7 +66,7 @@ public class PassportEnrollmentResource extends GenericEnrollmentResource<Passpo
 			idDocumentAttributes.put("type", "Passport");
 		else
 			idDocumentAttributes.put("type", "unknown");
-		credentials.put("idDocument", idDocumentAttributes);
+		credentials.put(new CredentialIdentifier(SCHEME_MANAGER, ISSUER, "idDocument"), idDocumentAttributes);
 
 		return credentials;
 	}
