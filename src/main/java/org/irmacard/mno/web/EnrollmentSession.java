@@ -36,6 +36,8 @@ import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.irmacard.api.common.exceptions.ApiError;
+import org.irmacard.api.common.exceptions.ApiException;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.info.CredentialIdentifier;
 import org.irmacard.idemix.util.CardVersion;
@@ -91,7 +93,7 @@ public class EnrollmentSession {
         try {
             return (PassportDataMessage) documentData;
         } catch (ClassCastException e) {
-            return null;
+            throw new ApiException(ApiError.UNEXPECTED_REQUEST);
         }
     }
 
@@ -99,7 +101,7 @@ public class EnrollmentSession {
         try {
             return (EDLDataMessage) documentData;
         } catch (ClassCastException e) {
-            return null;
+            throw new ApiException(ApiError.UNEXPECTED_REQUEST);
         }
     }
 
