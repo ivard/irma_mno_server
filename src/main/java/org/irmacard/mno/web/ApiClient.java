@@ -112,8 +112,7 @@ public class ApiClient {
 		// Compute credential list for in the issuing request
 		ArrayList<CredentialRequest> credentials = new ArrayList<>(credentialList.size());
 		for (CredentialIdentifier identifier : credentialList.keySet())
-			credentials.add(new CredentialRequest(
-					(int) validity, identifier.toString(), credentialList.get(identifier)));
+			credentials.add(new CredentialRequest((int) validity, identifier, credentialList.get(identifier)));
 
 		// Create issuing request, encode as unsigned JWT
 		IssuingRequest request = new IssuingRequest(null, null, credentials);
