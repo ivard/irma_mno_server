@@ -32,19 +32,18 @@
 
 package org.irmacard.mno.web;
 
-import java.math.BigInteger;
-import java.util.HashMap;
-import java.util.Map;
-
 import org.irmacard.api.common.exceptions.ApiError;
 import org.irmacard.api.common.exceptions.ApiException;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.info.CredentialIdentifier;
-import org.irmacard.idemix.util.CardVersion;
 import org.irmacard.mno.common.DocumentDataMessage;
 import org.irmacard.mno.common.EDLDataMessage;
 import org.irmacard.mno.common.EnrollmentStartMessage;
 import org.irmacard.mno.common.PassportDataMessage;
+
+import java.math.BigInteger;
+import java.util.HashMap;
+import java.util.Map;
 
 public class EnrollmentSession {
     public enum State {
@@ -58,7 +57,6 @@ public class EnrollmentSession {
     private HashMap<CredentialIdentifier, HashMap<String, String>> credentialList;
     private Map<CredentialIdentifier, Attributes> attributesList;
     private Map<CredentialIdentifier, BigInteger> nonceList;
-    private CardVersion cardVersion;
 
     public EnrollmentSession(String sessionToken, byte[] nonce) {
         this.sessionToken = sessionToken;
@@ -127,13 +125,5 @@ public class EnrollmentSession {
 
     public BigInteger getNonce(CredentialIdentifier cred) {
         return nonceList.get(cred);
-    }
-
-    public void setCardVersion(CardVersion cardVersion) {
-        this.cardVersion = cardVersion;
-    }
-
-    public CardVersion getCardVersion() {
-        return cardVersion;
     }
 }
