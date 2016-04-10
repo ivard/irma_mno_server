@@ -60,17 +60,5 @@ public class MNOApplication extends ResourceConfig {
 
         // register session state
         register(new EnrollmentSessionsBinder());
-
-        // Setup Core location for IRMA
-        try {
-            if (!DescriptionStore.isInitialized() || !IdemixKeyStore.isInitialized()) {
-                URI CORE_LOCATION = MNOApplication.class.getClassLoader().getResource("/irma_configuration/").toURI();
-                DescriptionStore.initialize(new DescriptionStoreDeserializer(CORE_LOCATION));
-                IdemixKeyStore.initialize(new IdemixKeyStoreDeserializer(CORE_LOCATION));
-            }
-        } catch (URISyntaxException|InfoException e) {
-            e.printStackTrace();
-            throw new RuntimeException(e);
-        }
     }
 }

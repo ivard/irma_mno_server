@@ -244,8 +244,4 @@ abstract public class GenericEnrollmentResource<DocData extends DocumentDataMess
         // TODO: query MNO DB
         return msg.verify(nonce);
     }
-
-    protected CredentialDescription getCredentialDescription(CredentialIdentifier cred) throws InfoException {
-        return DescriptionStore.getInstance().getCredentialDescription(cred);
-    }
 }
