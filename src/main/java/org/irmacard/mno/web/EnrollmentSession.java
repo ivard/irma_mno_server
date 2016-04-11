@@ -51,7 +51,7 @@ public class EnrollmentSession {
     }
 
     private String sessionToken;
-    private byte[] nonce;
+    private byte[] aaNonce;
     private State state;
     private DocumentDataMessage documentData;
     private HashMap<CredentialIdentifier, HashMap<String, String>> credentialList;
@@ -60,7 +60,7 @@ public class EnrollmentSession {
 
     public EnrollmentSession(String sessionToken, byte[] nonce) {
         this.sessionToken = sessionToken;
-        this.nonce = nonce;
+        this.aaNonce = nonce;
         this.state = State.STARTED;
 
         attributesList = new HashMap<CredentialIdentifier, Attributes>();
@@ -80,7 +80,7 @@ public class EnrollmentSession {
     }
 
     public EnrollmentStartMessage getStartMessage() {
-        return new EnrollmentStartMessage(sessionToken, nonce);
+        return new EnrollmentStartMessage(sessionToken, aaNonce);
     }
 
     public void setDocumentData(DocumentDataMessage documentData) {
@@ -125,5 +125,13 @@ public class EnrollmentSession {
 
     public BigInteger getNonce(CredentialIdentifier cred) {
         return nonceList.get(cred);
+    }
+
+    public byte[] getAANonce() {
+        return aaNonce;
+    }
+
+    public void setAANonce(byte[] aaNonce) {
+        this.aaNonce = aaNonce;
     }
 }

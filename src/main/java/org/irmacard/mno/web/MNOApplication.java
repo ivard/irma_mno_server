@@ -32,18 +32,10 @@
 
 package org.irmacard.mno.web;
 
-import java.net.URI;
-import java.net.URISyntaxException;
+import org.glassfish.jersey.server.ResourceConfig;
+import org.irmacard.mno.web.exceptions.MNOExceptionMapper;
 
 import javax.ws.rs.ApplicationPath;
-
-import org.glassfish.jersey.server.ResourceConfig;
-import org.irmacard.credentials.idemix.info.IdemixKeyStore;
-import org.irmacard.credentials.idemix.info.IdemixKeyStoreDeserializer;
-import org.irmacard.credentials.info.DescriptionStore;
-import org.irmacard.credentials.info.DescriptionStoreDeserializer;
-import org.irmacard.credentials.info.InfoException;
-import org.irmacard.mno.web.exceptions.MNOExceptionMapper;
 
 @ApplicationPath("/")
 public class MNOApplication extends ResourceConfig {
@@ -57,8 +49,5 @@ public class MNOApplication extends ResourceConfig {
         // register enrollment applications
         register(PassportEnrollmentResource.class);
         register(DLEnrollmentResource.class);
-
-        // register session state
-        register(new EnrollmentSessionsBinder());
     }
 }

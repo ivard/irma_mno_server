@@ -32,27 +32,23 @@
 
 package org.irmacard.mno.web;
 
-import java.security.SecureRandom;
-import java.util.*;
-
-import javax.inject.Inject;
-import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.Response;
-
 import org.apache.commons.codec.binary.Base64;
-import org.irmacard.credentials.info.CredentialDescription;
 import org.irmacard.credentials.info.CredentialIdentifier;
-import org.irmacard.credentials.info.DescriptionStore;
 import org.irmacard.credentials.info.InfoException;
 import org.irmacard.mno.common.*;
 import org.irmacard.mno.web.exceptions.InputInvalidException;
 import org.irmacard.mno.web.exceptions.SessionUnknownException;
 
+import javax.inject.Inject;
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.Response;
+import java.security.SecureRandom;
+import java.util.*;
+
 abstract public class GenericEnrollmentResource<DocData extends DocumentDataMessage> {
     private SecureRandom rnd;
 
-    @Inject
-    protected EnrollmentSessions sessions;
+    protected EnrollmentSessions sessions = EnrollmentSessions.getSessions();
 
     private static final int SESSION_TOKEN_LENGTH = 33;
     private static final int AA_NONCE_LENGTH = 8;

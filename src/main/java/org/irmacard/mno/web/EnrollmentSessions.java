@@ -35,11 +35,14 @@ package org.irmacard.mno.web;
 import java.util.HashMap;
 
 public class EnrollmentSessions {
-    private HashMap<String, EnrollmentSession> sessions;
+    private static EnrollmentSessions es = new EnrollmentSessions();
+    private HashMap<String, EnrollmentSession> sessions = new HashMap<String, EnrollmentSession>();
 
-    public EnrollmentSessions() {
-        sessions = new HashMap<String, EnrollmentSession>();
+    public static EnrollmentSessions getSessions() {
+        return es;
     }
+
+    private EnrollmentSessions() {}
 
     public void addSession(EnrollmentSession session) {
         sessions.put(session.getSessionToken(), session);
