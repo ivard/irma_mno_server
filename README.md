@@ -2,13 +2,18 @@
 
 A self-enrollment server for IRMA credentials using passports, identity cards or drivers licenses with NFC chips. It is meant to work together with the [card emulator app](https://github.com/credentials/irma_android_cardemu), which extracts some information from the document and sends it to this server. We then check the validity of the document, extract some personal information from it, and ask the [IRMA API server](https://github.com/credentials/irma_api_server) to issue some credentials containing the extracted information.
 
-# Running the server
+
+## Configuring the server
+
+The server needs a running and correctly configured [API server](https://github.com/credentials/irma_api_server) instance to do the credential issuing. The URL and credentials for this API server can be configured using a json file at `src/main/resources/config.json`. In the same directory a sample configuration file called `config.sample.json` is included, showing all options, their defaults, and what they mean.
+
+## Running the server
 
 The gradle build file should take care the dependencies. To run the server in development mode simply call:
 
     gradle appRun
 
-# Testing with cURL
+## Testing with cURL
 
 To make a GET request on a resource:
 
@@ -18,11 +23,11 @@ To make a POST request on a resource:
 
     curl -X POST -H "Content-Type: application/json" -d '{"a": 5.0,"b": -22.0}' http://localhost:8080/irma_mno_server_jersey/api/hello/json
 
-# Server API
+## Server API
 
 The following describes the API offered by the server to an MNO enrollment client. Currently the server supports enrolling with passports and identity cards (which behave identically), and electronic drivers licenses.
 
-## start
+### start
 
 To initiate a self-enrollement the client first needs to create a session with the server. The server will also immediately supply the client with the necessary nonce for the active authentication. Below, whenever `document` occurs in an URL, it must be replaced with either `passport` or `dl`.
 
@@ -35,7 +40,7 @@ Output:
  * sessionToken: a string encoding the session token
  * nonce: a Base64 encoded nonce for the active authentication
 
-## verify-passport
+### verify-passport
 
 The client retrieves the necessary data, the signatures and the active authentication response from the passport and returns them to the server.
 
