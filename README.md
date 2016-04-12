@@ -1,12 +1,12 @@
 # IRMA MNO server
 
-A self-enrollment server for IRMA credentials using passports or identity cards with NFC chips. It is meant to work together with the [card emulator app](https://github.com/credentials/irma_android_cardemu), which extracts some information from the passport and sends it this server. We then check the validity of the passport, extract some personal information from it, put that in a number of IRMA credentials and issue those to the card emulator app.
+A self-enrollment server for IRMA credentials using passports, identity cards or drivers licenses with NFC chips. It is meant to work together with the [card emulator app](https://github.com/credentials/irma_android_cardemu), which extracts some information from the document and sends it to this server. We then check the validity of the document, extract some personal information from it, and ask the [IRMA API server](https://github.com/credentials/irma_api_server) to issue some credentials containing the extracted information.
 
 # Running the server
 
 The gradle build file should take care the dependencies. To run the server in development mode simply call:
 
-    gradle jettyRun
+    gradle appRun
 
 # Testing with cURL
 
@@ -18,132 +18,35 @@ To make a POST request on a resource:
 
     curl -X POST -H "Content-Type: application/json" -d '{"a": 5.0,"b": -22.0}' http://localhost:8080/irma_mno_server_jersey/api/hello/json
 
-## Notes about serializing classes
-
-You need to have getters to get the fields, and setters to actually be able to reconstruct the JSON when it is supplied in a POST message.
-
 # Server API
 
-The following describes the API offered by the server to an MNO enrollment client. All calls except `start` require the client to pass in its sessionToken. If the session token is unknown, or has expired, the server complains with a 401.
-
- * 401 UNAUTHORIZED if sessionToken is unknown or expired
-
-Admittedly, this is a bit of an abuse of HTTP status codes, but this one most closely matches the intended meaning. Similarly, the client can send malformatted POST requests, in which case the server complains with a 400.
-
- * 400 BAD REQUEST if the POSTed JSON is incorrect
-
-Finally, the server operates a strict state engine. If requests are sent out of order the server also complains with a 400.
-
- * 401 UNAUTHORIZED if sessionToken is unknown or expired
+The following describes the API offered by the server to an MNO enrollment client. Currently the server supports enrolling with passports and identity cards (which behave identically), and electronic drivers licenses.
 
 ## start
 
-To initiate a self-enrollement the client first needs to create a session with the server. The server will also immediately supply the client with the necessary nonce for the active authentication.
+To initiate a self-enrollement the client first needs to create a session with the server. The server will also immediately supply the client with the necessary nonce for the active authentication. Below, whenever `document` occurs in an URL, it must be replaced with either `passport` or `dl`.
 
-GET https://<server>/api/v1/start
+`GET https://<server>/api/v2/document/start`
 
-Inputs: (none)
+Input: (none)
 
-Outputs:
+Output:
 
  * sessionToken: a string encoding the session token
  * nonce: a Base64 encoded nonce for the active authentication
 
 ## verify-passport
 
-*TODO: incomplete*
+The client retrieves the necessary data, the signatures and the active authentication response from the passport and returns them to the server.
 
-The client retrieves the necessary data, the signatures and the active authentication response from the passport and returns them to the server. The server will check the result of this authentication and returns one of the following four values:
+`POST https://<server>/<api>/v2/document/verify-document`
 
- * success: the data is valid, and the subscriber found in the database
- * not_found: the data is valid, but the subscriber was not found in the database
- * passport_invalid: the passport data itself was incorrect, the passport expired or the passport was reported stolen
- * aa_failed: the active authentication of the passport failed
-
-POST https://<server>/<api>/v1/verify-passport
-
-Inputs:
-
- * sessionToken: the sessionToken as obtained during `start`
- * imsi: the phone's imsi, *FIXME* encoded as something
- * dg1: Raw representation of datagroup 1
- * dg15: Raw representation of datagroup 15
- * sodfile: The reponse to the active authentication request
-
-(The encodings for `dg1`, `dg15` and `sodfile` correspond to JMRTD's byte array representation of the corresponding files.)
+Input: an `EDLDataMessage` or `PassportDataMessage` from the [mno_common](https://github.com/credentials/irma_mno_common/) project.
 
 Output:
-
- * result: success/not_found/passport_invalid/aa_failed
-
-## issue/credential-list
-
-After a successful validation of the passport data (the `verify-passport` call returned `success`) the server can issue credentials to the client based on the passport data. The `issue/credential-list` method can be called to retrieve a list of the credentials the server can issue, together with the desired attributes.
-
-POST https://<server>/<api>/v1/issue/credential-list
-
-Inputs:
-
- * sessionToken: the sessionToken as obtained during `start`
-
-this corresponds to the `BasicClientMessage` class in `irma_mno_common`.
-
-Output:
-
-A JSON object of credentials the credential's name is the name of the pair, whereas a JSON object representing the attributes is the value. The JSON object representing the attributes is an object of name-value pairs where the name is the attribute name and the value the string encoding of the attribute. Example:
-
-    {
-      "root" : {
-        "BSN" : "123456789"
-      },
-      "ageLower" : {
-        "over12" : "yes",
-        "over18" : "yes",
-        "over21" : "yes",
-        "over16" : "yes"
-      }
-    }
-
-## issue/{cred}/start
-
-Each of the credentials named in `issue/credential-list` can be issued. To start the issuance process the client makes a call to `issue/{cred}/start` where `{cred}` is the named credential. For example the start issuing the root credential named in the previous example, the client makes a call to `issue/root/start`. This request is APDU based
-
-POST https://<server>/<api>/v1/issue/{cred}/start
-
-Inputs:
-
- * sessionToken: the sessionToken as obtained during `start`
- * cardVersion: the Base64 encoding of the card's response to the select command
-
-this corresponds to the `RequestStartIssuanceMessage` class in `irma_mno_common`.
-
-Output:
-
-An array of CommandAPDUs that the client needs to send to the card (in this order). Every CommandAPDU is a JSON object containing:
-
- * key: an identifier for the command
- * command: a Base64 encoding of the APDU that needs to be send to the card.
-
-this corresponds to the `ProtocolCommands` class from Scuba.
-
-## issue/{cred}/finish
-
-To finish the issuance process, the client needs to post the card's responses to the first batch of issuance messages. The `{cred}` parameter is as before.
-
-POST https://<server>/<api>/v1/issue/{cred}/finish
-
-Inputs:
-
- * sessionToken: the sessionToken as obtained during `start`
- * responses: a JSON object representing the protocol responses
-
-The responses object contains the command's key as name, whereas the value contains:
-
- * key: The response's key again
- * apdu: The Base64 encoded response APDU (including the two status bytes)
-
-This corresponds to the `RequestFinishIssuanceMessage` class in `irma_mno_common`.
-
-Outputs:
-
-As for `issue/{cred}/start` an array of CommandAPDUs that need to be sent to the card.
+ * One of the following six status values:
+   * `SUCCESS`: The document was valid and the data for the credentials was successfully extracted.
+   * `PASSPORT_INVALID`: The passport was expired or reported stolen.
+   * `HASHES_INVALID`, `SIGNATURE_INVALID`, `AA_FAILED`: The passport data itself was incorrect.
+   * `NOT_FOUND`: In a closed subscription model, this can be used to indicate that the document owner was not found in the subscriber database.
+ * If the status was `SUCCESS`, a URL to an [API server](https://github.com/credentials/irma_api_server) instance that will continue issuance of the credentials.
