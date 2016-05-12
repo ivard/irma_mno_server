@@ -32,7 +32,7 @@ dependencies {
 
     compile 'io.jsonwebtoken:jjwt:0.6.0'
 
-    compile 'org.irmacard.mno:irma_mno_common:0.2.0'
+    compile 'org.irmacard.mno:irma_mno_common:0.2.1'
 
     testCompile "junit:junit:4.11"
     testCompile 'org.glassfish.jersey.test-framework.providers:jersey-test-framework-provider-jetty:2.19'

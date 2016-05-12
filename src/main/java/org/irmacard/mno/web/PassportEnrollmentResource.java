@@ -6,7 +6,7 @@ import org.irmacard.mno.common.EnrollmentStartMessage;
 import org.irmacard.mno.common.PassportDataMessage;
 import org.irmacard.mno.common.PassportVerificationResult;
 import org.irmacard.mno.common.PassportVerificationResultMessage;
-import org.jmrtd.lds.MRZInfo;
+import org.jmrtd.lds.icao.MRZInfo;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
