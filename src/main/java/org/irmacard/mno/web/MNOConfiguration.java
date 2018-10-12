@@ -9,10 +9,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.net.URLConnection;
-import java.security.KeyFactory;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
+import java.security.*;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 
@@ -23,10 +20,12 @@ public class MNOConfiguration {
 
 	private String api_server = "";
 	private String api_name = "";
+	private String jwt_api_key = "api-jwt.der";
 	private boolean sign_issue_jwts = true;
 	private String jwt_privatekey = "sk.der";
 
 	private transient PrivateKey jwtPrivateKey;
+	private transient PublicKey jwtApiKey;
 
 	public MNOConfiguration() {}
 
@@ -55,7 +54,7 @@ public class MNOConfiguration {
 		return instance;
 	}
 
-	public String getApiServerUrl() {
+	private String getApiServerUrl() {
 		return api_server;
 	}
 
@@ -118,4 +117,30 @@ public class MNOConfiguration {
 	public String toString() {
 		return GsonUtil.getGson().toJson(this);
 	}
+
+    public String getApiServerIssueUrl() {
+        return getApiServerUrl() + "/issue/";
+    }
+
+	public String getApiServerDisclosureUrl() {
+		return getApiServerUrl() + "/verification/";
+	}
+
+    public Key getApiJwtKey() throws KeyManagementException {
+		if (jwtApiKey == null) {
+			try {
+				byte[] bytes = MNOConfiguration.getResource(jwt_api_key);
+				if (bytes == null || bytes.length == 0)
+					throw new KeyManagementException("Could not read public key");
+
+				PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(bytes);
+
+				jwtApiKey = KeyFactory.getInstance("RSA").generatePublic(spec);
+			} catch (IOException|NoSuchAlgorithmException|InvalidKeySpecException e) {
+				throw new KeyManagementException(e);
+			}
+		}
+
+		return jwtApiKey;
+    }
 }

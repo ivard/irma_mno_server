@@ -42,6 +42,7 @@ import org.irmacard.mno.web.exceptions.SessionUnknownException;
 import javax.inject.Inject;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
+import java.security.KeyManagementException;
 import java.security.SecureRandom;
 import java.util.*;
 
@@ -98,7 +99,14 @@ abstract public class GenericEnrollmentResource<DocData extends DocumentDataMess
         session.setState(EnrollmentSession.State.PASSPORT_VERIFIED);
         HashMap<CredentialIdentifier, HashMap<String, String>> credentialList = getCredentialList(session);
         session.setCredentialList(credentialList);
-        msg.setIssueQr(ApiClient.createIssuingSession(credentialList));
+        try {
+            msg.setIssueQr(ApiClient.createIssuingSession(credentialList,
+                    MNOConfiguration.getInstance().getApiName(),
+                    MNOConfiguration.getInstance().getJwtAlgorithm(),
+                    MNOConfiguration.getInstance().getJwtPrivateKey()));
+        } catch (KeyManagementException e) {
+            throw new WebApplicationException(Response.Status.INTERNAL_SERVER_ERROR);
+        }
 
         return msg;
     }

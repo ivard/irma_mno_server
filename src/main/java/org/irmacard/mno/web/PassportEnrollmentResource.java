@@ -1,28 +1,141 @@
 package org.irmacard.mno.web;
 
+import com.google.gson.Gson;
+import org.irmacard.api.common.AttributeDisjunction;
+import org.irmacard.api.common.AttributeDisjunctionList;
+import org.irmacard.api.common.ClientQr;
+import org.irmacard.credentials.info.AttributeIdentifier;
 import org.irmacard.credentials.info.CredentialIdentifier;
 import org.irmacard.credentials.info.InfoException;
-import org.irmacard.mno.common.EnrollmentStartMessage;
-import org.irmacard.mno.common.PassportDataMessage;
-import org.irmacard.mno.common.PassportVerificationResult;
-import org.irmacard.mno.common.PassportVerificationResultMessage;
+import org.irmacard.mno.common.*;
+import org.irmacard.mno.common.util.GsonUtil;
 import org.jmrtd.lds.icao.MRZInfo;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import java.security.KeyManagementException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.HashMap;
+import java.util.*;
 
 @Path("v2/passport")
 public class PassportEnrollmentResource extends GenericEnrollmentResource<PassportDataMessage> {
+	protected static Gson gson = GsonUtil.getGson();
+
 	@GET
 	@Path("/start")
 	@Produces(MediaType.APPLICATION_JSON)
 	@Override
 	public EnrollmentStartMessage start() {
 		return super.start();
+	}
+
+	@GET
+	@Path("/surfverify")
+	@Produces(MediaType.APPLICATION_JSON)
+	public DisclosureSessionMessage verifySurf() {
+		//TODO: change to post, to first verify sessionnumber?
+		AttributeDisjunctionList list = new AttributeDisjunctionList(4);
+		list.add(new AttributeDisjunction("First name", getAttributeIdentifier("firstname")));
+		list.add(new AttributeDisjunction("Last name", getAttributeIdentifier("familyname")));
+		list.add(new AttributeDisjunction("Radboud number", getAttributeIdentifier("id")));
+		list.add(new AttributeDisjunction("E-mail address", getAttributeIdentifier("email")));
+		try {
+			ClientQr qr = ApiClient.createDisclosureSession(
+					list,
+					"testsp",
+					"testsp",
+					MNOConfiguration.getInstance().getJwtAlgorithm(),
+					MNOConfiguration.getInstance().getJwtPrivateKey());
+			DisclosureSessionMessage msg = new DisclosureSessionMessage(qr,
+					qr.getUrl().replace("http","ws").replace("verification","status"),
+					qr.getUrl().concat("/getproof"));
+			return msg;
+		} catch (KeyManagementException e) {
+			System.out.println("ERROR: getJWTPrivateKey failed");
+			e.printStackTrace();
+			throw new WebApplicationException(Response.Status.INTERNAL_SERVER_ERROR);
+		}
+	}
+
+	private AttributeIdentifier getAttributeIdentifier(String attributeName) {
+		return new AttributeIdentifier(
+				new CredentialIdentifier(
+						"pbdf",
+						"pbdf",
+						"surfnet"),
+				attributeName
+		);
+	}
+
+	@POST
+	@Path("/verify-documents")
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.APPLICATION_JSON)
+	public ValidationResultMessage verifyDocuments(Map<Integer,String> dataMap){
+		List<AbstractDocumentData> data = retreiveDataFromJSON(dataMap);
+		for (AbstractDocumentData datum: data){
+			ValidationResult result = datum.validate();
+			if (!result.isValid()){
+				return new ValidationResultMessage(result);
+			}
+		}
+		//if we get here, then all data has been validated, so we start issuing
+		return retreiveIssuingJWT(data);
+	//	return new ValidationResultMessage(new ValidationResult(ValidationResult.Result.VALID));
+	}
+
+	private ValidationResultMessage retreiveIssuingJWT(List<AbstractDocumentData> data){
+		ValidationResultMessage msg = new ValidationResultMessage(new ValidationResult(ValidationResult.Result.VALID));
+		HashMap<CredentialIdentifier, HashMap<String,String>> toIssue = new HashMap<>();
+		for (AbstractDocumentData datum: data){
+			toIssue.put(datum.getCredentialIdentifier(),datum.getIssuingJWT());
+		}
+		System.out.println("Created issuing list: " + toIssue.toString());
+		try {
+			msg.setIssueQr(ApiClient.createIssuingSession(toIssue,
+					MNOConfiguration.getInstance().getApiName(),
+					MNOConfiguration.getInstance().getJwtAlgorithm(),
+					MNOConfiguration.getInstance().getJwtPrivateKey()));
+			System.out.println("set the QR?");
+		} catch (KeyManagementException e) {
+			System.out.println("ERROR: getJWTPrivateKey failed");
+			e.printStackTrace();
+			throw new WebApplicationException(Response.Status.INTERNAL_SERVER_ERROR);
+		}
+		System.out.println("Msg to send: "+ gson.toJson(msg));
+		return msg;
+	}
+
+	private List<AbstractDocumentData> retreiveDataFromJSON(Map<Integer,String> dataMap){
+		List<AbstractDocumentData> data = new ArrayList<>();
+		for (Map.Entry<Integer,String> documentData : dataMap.entrySet()){
+			System.out.println("Object found: "+documentData.getValue());
+			switch (documentData.getKey()){
+				case AbstractDocumentData.RADBOUD:
+					RadboudData rd = gson.fromJson(documentData.getValue(), RadboudData.class);
+					try {
+						rd.setJwtSigningKey(MNOConfiguration.getInstance().getApiJwtKey());
+					} catch (KeyManagementException e){
+						System.out.println("unable to set API JWT key for Raboud credential");
+					}
+					data.add(rd);
+					break;
+				case AbstractDocumentData.PASSPORT:
+					PassportData pd = gson.fromJson(documentData.getValue(), PassportData.class);
+					data.add(pd);
+					break;
+				case AbstractDocumentData.EDL:
+					EDlData edd = gson.fromJson(documentData.getValue(),EDlData.class);
+					data.add(edd);
+					break;
+				default:
+					System.out.println("Error, encountered unknown object, type: "+documentData.getKey()+" objString: "+documentData.getValue());
+					break;
+			}
+		}
+		return data;
 	}
 
 	@POST
