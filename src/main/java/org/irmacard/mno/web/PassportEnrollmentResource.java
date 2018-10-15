@@ -217,7 +217,7 @@ public class PassportEnrollmentResource extends GenericEnrollmentResource<Passpo
 	@Produces(MediaType.TEXT_PLAIN)
 	public String convertToBmp(String otherImageType) {
 		try {
-			// graphicsmagic (gm) tool needed to convert images
+			// GraphicsMagick (gm) tool needed to convert images
 			ProcessBuilder pb = new ProcessBuilder("/bin/sh", "-c", "echo " + otherImageType + " | base64 --decode | gm convert - bmp:- | base64");
 			Process p = pb.start();
 			BufferedReader ir = new BufferedReader(new InputStreamReader(p.getInputStream()));
