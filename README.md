@@ -7,6 +7,14 @@ A self-enrollment server for IRMA credentials using passports, identity cards or
 
 The server needs a running and correctly configured [API server](https://github.com/credentials/irma_api_server) instance to do the credential issuing. The URL and credentials for this API server can be configured using a json file at `src/main/resources/config.json`. In the same directory a sample configuration file called `config.sample.json` is included, showing all options, their defaults, and what they mean.
 
+To be able to also process portaits of older passport types the image tool GraphicsMagick (http://www.graphicsmagick.org/download.html) is required. Without this tool the application will only support passports with BMP images. The tool must be accessible from PATH. In Debian/Ubuntu GrahpicsMagick can be installed via:
+
+    sudo apt-get install python-software-properties
+    sudo apt-get install software-properties-common
+    sudo add-apt-repository ppa:rwky/graphicsmagick
+    sudo apt-get update
+    sudo apt-get install graphicsmagick
+
 ## Running the server
 
 The gradle build file should take care the dependencies. To run the server in development mode simply call:

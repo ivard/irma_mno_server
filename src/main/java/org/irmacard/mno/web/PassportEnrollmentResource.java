@@ -7,17 +7,24 @@ import org.irmacard.api.common.ClientQr;
 import org.irmacard.credentials.info.AttributeIdentifier;
 import org.irmacard.credentials.info.CredentialIdentifier;
 import org.irmacard.credentials.info.InfoException;
-import org.irmacard.mno.common.*;
+import org.irmacard.mno.common.EnrollmentStartMessage;
+import org.irmacard.mno.common.PassportDataMessage;
+import org.irmacard.mno.common.PassportVerificationResultMessage;
 import org.irmacard.mno.common.util.GsonUtil;
 import org.jmrtd.lds.icao.MRZInfo;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.security.KeyManagementException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+
+import static java.util.stream.Collectors.joining;
 
 @Path("v2/passport")
 public class PassportEnrollmentResource extends GenericEnrollmentResource<PassportDataMessage> {
@@ -206,5 +213,28 @@ public class PassportEnrollmentResource extends GenericEnrollmentResource<Passpo
 		credentials.put(new CredentialIdentifier(SCHEME_MANAGER, ISSUER, "idDocument"), idDocumentAttributes);
 
 		return credentials;
+	}
+
+	@POST
+	@Path("/image-converter")
+	@Consumes(MediaType.TEXT_PLAIN)
+	@Produces(MediaType.TEXT_PLAIN)
+	public String convertToBmp(String otherImageType) {
+		try {
+			// graphicsmagic (gm) tool needed to convert images
+			ProcessBuilder pb = new ProcessBuilder("/bin/sh", "-c", "echo " + otherImageType + " | base64 --decode | gm convert - bmp:- | base64");
+			Process p = pb.start();
+			BufferedReader ir = new BufferedReader(new InputStreamReader(p.getInputStream()));
+			String bmp =  ir.lines().collect(joining());
+			if (bmp.length() > 1000) {
+				// Check whether result is large enough to be an image
+				return bmp;
+			}
+		}
+		catch(IOException e) {
+			e.printStackTrace();
+			throw new WebApplicationException(Response.Status.INTERNAL_SERVER_ERROR);
+		}
+		throw new WebApplicationException("Image manipulation of given image type is not supported", Response.Status.NOT_IMPLEMENTED);
 	}
 }
